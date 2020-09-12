@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Oasis 0.0.0</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="odometer-theme.css" />
+</head>
+
+<body>
+  <div class="spinner">
+    <!-- <div class="lds-dual-ring"></div> -->
+
+    <!-- Connecting -->
+  </div>
+
+  <div class="game">
+    <div class="status"></div>
+
+    <!-- <div class="create-user">
+      <h2>Create User:</h2>
+      <input class="user-name" type="text" />
+  
+      <button class="create-user-btn">Create</button>
+    </div> -->
+
+    <div class="game-container">
+      <canvas id="game" width="800" height="800"></canvas>
+    </div>
+
+    <h2 class="user">User: ?</h2>
+    <h2 class="turn">Turn: 0</h2>
+    <!-- <h2 class="cash ">Cash: 0</h2> -->
+    <div>Cash: <span class="odometer cash"></span></div>
+
+    <div>
+      <button class="deploy-worker">Worker (3)</button>
+    </div>
+
+    <div>
+      <button class="purchase-land">Purchase Land</button>
+    </div>
+
+    <div>
+      <button class="build-factory">Build Factory</button>
+    </div>
+
+    <!-- <div>
+      <button class="move-worker">Move Worker</button>
+    </div> -->
+
+    <hr />
+    <div class="selected-tile">
+      
+    </div>
+
+    <hr />
+    
+    <div class="scores">
+      <h2>Scores</h2>
+
+      <div><span class="player-1"></span>: <span class="odometer player-1-cash"></span></div>
+      <div><span class="player-2"></span>: <span class="odometer player-2-cash"></span></div>
+      <div><span class="player-3"></span>: <span class="odometer player-3-cash"></span></div>
+      <div><span class="player-4"></span>: <span class="odometer player-4-cash"></span></div>
+      <div><span class="player-5"></span>: <span class="odometer player-5-cash"></span></div>
+      <div><span class="player-6"></span>: <span class="odometer player-6-cash"></span></div>
+      <div><span class="player-7"></span>: <span class="odometer player-7-cash"></span></div>
+      <div><span class="player-8"></span>: <span class="odometer player-8-cash"></span></div>
+      <div><span class="player-9"></span>: <span class="odometer player-9-cash"></span></div>
+      <div><span class="player-10"></span>: <span class="odometer player-10-cash"></span></div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+    integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+  <script src="odometer.js"></script>
+
+  <script src="game.js"></script>
+</body>
+
+</html>
