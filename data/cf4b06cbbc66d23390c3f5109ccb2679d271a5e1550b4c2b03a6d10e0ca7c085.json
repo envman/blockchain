@@ -1,0 +1,13 @@
+{
+  "object": {
+    "type": "build-factory",
+    "pos": {
+      "x": 15,
+      "y": 3
+    },
+    "stamp": "dDSYKqjWb"
+  },
+  "hash": "cf4b06cbbc66d23390c3f5109ccb2679d271a5e1550b4c2b03a6d10e0ca7c085",
+  "signature": "c1b3d4bfb4e8f04f374049b585b7eb4203dcc718b5e582fbe509f3368e1512ab3c7f4d7784cfe68466d6d77fd810cdbff66424c268c6e7b71aefb7aacaed0f3a",
+  "username": "ENV"
+}

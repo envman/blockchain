@@ -1,3 +1,24 @@
+## Object Wrapper
+
+const createObject = obj => {
+
+
+
+  return {
+    username: object.username,
+
+  }
+}
+
+```js
+{
+  hash: '#',
+  signature: '#',
+  username: 'ENV',
+  object: {}
+}
+```
+
 ### register-user
 
 - Should we have type: 'action' and action-type: 'register-user'

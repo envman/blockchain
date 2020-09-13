@@ -1,0 +1,17 @@
+{
+  "object": {
+    "type": "move-worker",
+    "pos": {
+      "x": 14,
+      "y": 3
+    },
+    "from": {
+      "x": 14,
+      "y": 2
+    },
+    "stamp": "YviOxHtSJ"
+  },
+  "hash": "2d63e6c71c94e15a19314f0bca0a248d086e2d2f2ee35273ea409bb26b26fa10",
+  "signature": "6d67fea8205827e0537121c09b72d4624dcd86307a944fbd8c76d1e9fbb4d0ca32cdb49bff8c9806444d08fe86433103c74d38db1b58dedbd6d736619c02bfa2",
+  "username": "ENV"
+}

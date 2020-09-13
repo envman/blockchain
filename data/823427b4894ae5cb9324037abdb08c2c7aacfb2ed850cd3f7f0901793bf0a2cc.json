@@ -1,0 +1,13 @@
+{
+  "object": {
+    "type": "purchase-land",
+    "pos": {
+      "x": 15,
+      "y": 2
+    },
+    "stamp": "-Yq12OL2-"
+  },
+  "hash": "823427b4894ae5cb9324037abdb08c2c7aacfb2ed850cd3f7f0901793bf0a2cc",
+  "signature": "fd9aef8f6d5a11b971a51983dd8a000b623b1896b5b7c4fa067ca6027a9f1c5e2a983c103a63e3192be511ae15600fae8d3240efed9c31a827cf87dc17cfa3c4",
+  "username": "ENV"
+}

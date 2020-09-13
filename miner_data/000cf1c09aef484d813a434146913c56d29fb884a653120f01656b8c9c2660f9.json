@@ -1,0 +1,12 @@
+{
+  "object": {
+    "type": "block",
+    "previous": "000fd43b064789a8433a066ee4aa71edbfaec77de86996faa74c7999dbfd70a6",
+    "difficulty": 3,
+    "nonce": 3745,
+    "actions": []
+  },
+  "hash": "000cf1c09aef484d813a434146913c56d29fb884a653120f01656b8c9c2660f9",
+  "signature": "d10acba955d4fd8f59e6d080e0d85d22cf676c3908c8a13b0154f572fb75e2c770469dcbbe29c0a9a4cfcfba57b62c1622b90471c61f16ba1b80e2283021f697",
+  "username": "origin"
+}

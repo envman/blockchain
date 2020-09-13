@@ -1,0 +1,13 @@
+{
+  "object": {
+    "type": "deploy-worker",
+    "pos": {
+      "x": 14,
+      "y": 4
+    },
+    "stamp": "vVFGE5NCm"
+  },
+  "hash": "1799027ac5a3c34c5e5660d6bdcf8aaf103c3861139b02379d0750cd49f978dd",
+  "signature": "03c7862126f2f63d4f646ca92f858e27bc9ce074dda778c807f3ea8d9b0e089d4926b127d64452d07b447b32fa8dce86905e949889a5f89ce837e6be0b2322a6",
+  "username": "ENV"
+}

@@ -70,6 +70,12 @@ const createView = (existing, update) => {
           } else {
             user.cash = user.cash + 1
           }
+
+          if (worker.username === tile.owner && tile.building === 'R') {
+            if (view.turn % 10 === 0) {
+              user.workers = user.workers + 1
+            }
+          }
         }
       }
     }
@@ -440,6 +446,7 @@ module.exports = (opts) => {
                   .then(potential => {
                     if (potential.turn > view.turn) {
                       view = potential
+                      meta.head = msg.hash
 
                       if (!view.users.find(x => x.username === opts.username)) {
                         console.log(`${opts.username} not registered`)

@@ -1,0 +1,17 @@
+{
+  "object": {
+    "type": "move-worker",
+    "pos": {
+      "x": 14,
+      "y": 4
+    },
+    "from": {
+      "x": 15,
+      "y": 3
+    },
+    "stamp": "Zt1RhofnD"
+  },
+  "hash": "41469330f3ce6bf72c370e93824a4dfc931c04eeb4758f7d4f0e41224742f327",
+  "signature": "e804feb129f409b8a86435b06ffc0fcf8046931cc199b93a39e20c8ba80efb8146fca69a9ef1297b9a1ce00fd2c4307c7226848f32b162528b2e1b963d20dd43",
+  "username": "ENV"
+}

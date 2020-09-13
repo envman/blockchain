@@ -1,0 +1,14 @@
+{
+  "type": "content",
+  "hash": "444337cdcfed7781669094c9bf09b5a609804e37472817adff2f9ac51e06d6a3",
+  "object": {
+    "type": "deploy-worker",
+    "pos": {
+      "x": 14,
+      "y": 2
+    },
+    "stamp": "30qnpmyAn"
+  },
+  "signature": "175a54fc5b43dfb445ce7513c99d6d3a0b05a3bab52dc64c0948f761ee87443f647fbe42370b4a9317a556e0f2cb81a36227acfcc75826ece5d7bd782b337946",
+  "username": "ENV"
+}

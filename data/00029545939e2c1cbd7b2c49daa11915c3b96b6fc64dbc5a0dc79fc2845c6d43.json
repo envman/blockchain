@@ -1,0 +1,17 @@
+{
+  "type": "content",
+  "hash": "00029545939e2c1cbd7b2c49daa11915c3b96b6fc64dbc5a0dc79fc2845c6d43",
+  "object": {
+    "type": "block",
+    "previous": "00042d7774f6880235dc3a91c9535038d5259649970ba38d45e7a71ea62a0943",
+    "difficulty": 3,
+    "nonce": 5266,
+    "actions": [
+      "eedcb852cd1db87fddf8d3b86f1b421828ac42a53ef0b2995bd0cb20569dda14",
+      "1799027ac5a3c34c5e5660d6bdcf8aaf103c3861139b02379d0750cd49f978dd",
+      "8a7720b701f542f956c25bbaa628585f31466dd8e1138ce980bf1cbcd69a72d8"
+    ]
+  },
+  "signature": "c8a0f7f2e4475fa2ee457444ded4d3e42bd60df9eafeacc05b55a05c20dc342d6eebd653ad54879fb73eb51e46ccc32066dc6cd8a561952dabaa78ba66db12a0",
+  "username": "origin"
+}

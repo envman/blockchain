@@ -1,0 +1,13 @@
+{
+  "object": {
+    "type": "deploy-worker",
+    "pos": {
+      "x": 15,
+      "y": 3
+    },
+    "stamp": "vTCiRm_VK"
+  },
+  "hash": "b2e767fc65f54bec87a3550947a0a2def31d58381b92d58397e460cbbe1a1f1f",
+  "signature": "cd96345edcad956ccd36e67ca4cf5aeb7f0ea1ae4363c37330988c383e9d143068ce6f1e48f1e20d099fd693263aa907a9c23ccabcb1b4107825c4fde7fb2565",
+  "username": "ENV"
+}

@@ -71,6 +71,7 @@ const draw = ({ game, user }) => {
 }
 
 let mode
+let mode_data
 let selected_tile
 
 canvas.addEventListener('click', e => {
@@ -88,6 +89,8 @@ canvas.addEventListener('click', e => {
     return
   }
 
+  const data = mode_data || {}
+
   fetch(`${window.location.origin}/action`, {
     method: 'POST',
     headers: {
@@ -95,9 +98,13 @@ canvas.addEventListener('click', e => {
     },
     body: JSON.stringify({
       type: mode,
-      pos
+      pos,
+      ...data
     })
-  }).then(() => mode = undefined)
+  }).then(() => {
+    mode = undefined
+    mode_data = undefined
+  })
 })
 
 $(() => {
@@ -113,11 +120,14 @@ $(() => {
       $('.deploy-worker').text(`Worker ${workers}`)
       $('.deploy-worker').click(_ => mode = 'deploy-worker')
 
-      x.user.cash > 4 ? $('.purchase-land').show() : $('.purchase-land').hide()
+      x.user.cash >= 4 ? $('.purchase-land').show() : $('.purchase-land').hide()
       $('.purchase-land').click(_ => mode = 'purchase-land')
 
-      x.user.cash > 8 ? $('.build-factory').show() : $('.build-factory').hide()
+      x.user.cash >= 8 ? $('.build-factory').show() : $('.build-factory').hide()
       $('.build-factory').click(_ => mode = 'build-factory')
+
+      x.user.cash >= 20 ? $('.build-recruiter').show() : $('.build-recruiter').hide()
+      $('.build-recruiter').click(_ => mode = 'build-recruiter')
 
       $('.move-worker').click(_ => mode = 'move-worker')
 
@@ -143,6 +153,20 @@ $(() => {
 
         workers.map(w => {
           $('.selected-tile').append(`<h4>${w.username}</h4>`)
+
+          const span = $(`<span></span>`)
+          const button = $(`<button class="move-worker">Move Worker</button>`)
+
+          button.click(() => {
+            mode = 'move-worker'
+            mode_data = {
+              from: selected_tile
+            }
+          })
+
+          span.append(button)
+
+          $('.selected-tile').append(span)
         })
       } else {
         $('.selected-tile').hide()
