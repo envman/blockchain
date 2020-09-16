@@ -1,17 +1,48 @@
 const EventEmitter = require('events')
 
-module.exports = (connection) => {
+const alive_time = 60000 * 2
+
+module.exports = (connection, host) => {
   const peer = new EventEmitter()
 
-  // connection.once('close', () => {
-  //   peer.emit('close')
-  // })
+  // console.log('add', host)
+
+  // peer.host = connection.fulladdress
 
   connection.on('error', () => {
     peer.emit('close')
   })
 
+  let timer
+  let final
+
+  const reset_dead = () => {
+    clearTimeout(timer)
+    clearTimeout(final)
+
+    timer = setTimeout(() => {
+      peer.send({ type: 'ping' })
+
+      final = setTimeout(() => {
+        peer.emit('close')
+      }, alive_time)
+    }, alive_time)
+  }
+
   connection.on('message', message => {
+    reset_dead()
+
+    if (message.type === 'ping') {
+      console.log('ping')
+
+      return peer.send({ type: 'pong' })
+    }
+
+    if (message.type === 'pong') {
+      console.log('pong')
+      return
+    }
+
     peer.emit('message', message)
   })
 
@@ -27,9 +58,9 @@ module.exports = (connection) => {
     }
 
     connection.sendMessage(msg)
-
-    // connection.write(JSON.stringify(msg) + '__')
   }
+
+  reset_dead()
 
   return peer
 }

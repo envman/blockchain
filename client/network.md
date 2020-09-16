@@ -1,3 +1,17 @@
+# Road Map
+
+## V1.0
+- Ping/Pong
+- Peer Management
+- Multiple Miner Support
+- Network Times
+- Difficulty Managment
+
+## V2.0
+
+- Network Testing with stats
+- Uncles
+
 # Messages
 
 ## Peer

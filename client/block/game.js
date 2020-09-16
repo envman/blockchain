@@ -57,7 +57,6 @@ const createView = (existing, update) => {
 
         throw error
       }
-
     })
 
     for (let column of view.world) {
@@ -65,16 +64,8 @@ const createView = (existing, update) => {
         for (let worker of tile.workers) {
           const user = view.users.find(x => x.username === worker.username)
 
-          if (worker.username === tile.owner && tile.building === 'F') {
-            user.cash = user.cash + 3
-          } else {
-            user.cash = user.cash + 1
-          }
-
-          if (worker.username === tile.owner && tile.building === 'R') {
-            if (view.turn % 10 === 0) {
-              user.workers = user.workers + 1
-            }
+          if (worker.tick) {
+            worker.tick()
           }
         }
       }
@@ -484,6 +475,7 @@ module.exports = (opts) => {
               username: opts.username,
               workers: me && me.workers,
               cash: me && me.cash,
+              members: me && me.members,
             },
 
             game: view

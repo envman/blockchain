@@ -1,7 +1,11 @@
 const h = require('./hash')
 
-module.exports = ({ objects, network, broadcast, rumors }) => {
+module.exports = ({ objects, network, broadcast, rumors, addresses }) => {
   const network_messages = {
+    greet: (msg, peer) => {
+      const existing = addresses.find(x => x.port === msg.port)
+    },
+
     publish: (msg, peer) => {
       objects.load(msg.hash)
         .then(existing => {

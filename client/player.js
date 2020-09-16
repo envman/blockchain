@@ -10,6 +10,7 @@ const user_options = {
   port: 9002,
   wipe: false,
   data_root: path.join(__dirname, '..', 'player_data'),
+  // miner: true,
 }
 
 client(user_options)

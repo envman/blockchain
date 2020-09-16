@@ -52,6 +52,8 @@ const draw = ({ game, user }) => {
       // ctx.fillStyle = colors[tile.style]
       if (tile.owner === user.username) {
         ctx.fillStyle = colors[9]
+      } else if (tile.owner) {
+        ctx.fillStyle = colors[8]
       } else {
         ctx.fillStyle = colors[0]
       }
@@ -59,12 +61,15 @@ const draw = ({ game, user }) => {
 
       ctx.font = '14px serif';
       ctx.fillStyle = "#000000"
-      ctx.fillText(tile.workers.length, (x * square.width) + 2, (y * square.height) + 45)
+      
+      const cap = (tile.building && tile.building.level) || 1
+
+      ctx.fillText(`${tile.workers.length}/${cap}`, (x * square.width) + 2, (y * square.height) + 45)
 
       if (tile.building) {
         ctx.font = '24px serif';
         ctx.fillStyle = "#000000"
-        ctx.fillText(tile.building, (x * square.width) + 20, (y * square.height) + 25)
+        ctx.fillText(tile.building.code, (x * square.width) + 20, (y * square.height) + 25)
       }
     }
   }
@@ -73,6 +78,21 @@ const draw = ({ game, user }) => {
 let mode
 let mode_data
 let selected_tile
+
+const publish_action = action => {
+  console.log('action', action)
+
+  return fetch(`${window.location.origin}/action`, {
+    method: 'POST',
+    headers: {
+      "Content-Type": 'application/json'
+    },
+    body: JSON.stringify(action)
+  }).then(() => {
+    mode = undefined
+    mode_data = undefined
+  })
+}
 
 canvas.addEventListener('click', e => {
   const x = e.offsetX
@@ -91,20 +111,13 @@ canvas.addEventListener('click', e => {
 
   const data = mode_data || {}
 
-  fetch(`${window.location.origin}/action`, {
-    method: 'POST',
-    headers: {
-      "Content-Type": 'application/json'
-    },
-    body: JSON.stringify({
-      type: mode,
-      pos,
-      ...data
-    })
-  }).then(() => {
-    mode = undefined
-    mode_data = undefined
-  })
+  const body = {
+    type: mode,
+    pos,
+    ...data
+  }
+
+  publish_action(body)
 })
 
 $(() => {
@@ -114,11 +127,15 @@ $(() => {
     .then(x => {
       draw(x)
 
-      const workers = x.user.workers
+      const { workers, members } = x.user
 
       workers > 0 ? $('.deploy-worker').show() : $('.deploy-worker').hide()
       $('.deploy-worker').text(`Worker ${workers}`)
       $('.deploy-worker').click(_ => mode = 'deploy-worker')
+
+      members > 0 ? $('.deploy-member').show() : $('.deploy-member').hide()
+      $('.deploy-member').text(`Member ${members}`)
+      $('.deploy-member').click(_ => mode = 'deploy-member')
 
       x.user.cash >= 4 ? $('.purchase-land').show() : $('.purchase-land').hide()
       $('.purchase-land').click(_ => mode = 'purchase-land')
@@ -128,6 +145,9 @@ $(() => {
 
       x.user.cash >= 20 ? $('.build-recruiter').show() : $('.build-recruiter').hide()
       $('.build-recruiter').click(_ => mode = 'build-recruiter')
+
+      x.user.cash >= 40 ? $('.build-hq').show() : $('.build-hq').hide()
+      $('.build-hq').click(_ => mode = 'build-hq')
 
       $('.move-worker').click(_ => mode = 'move-worker')
 
@@ -148,7 +168,18 @@ $(() => {
         $('.selected-tile').append(`<h3>${selected_tile.x}:${selected_tile.y} | Owner: ${owner}</h3>`)
 
         if (building) {
-          $('.selected-tile').append(`<h3>Building: ${building}</h3>`)
+          $('.selected-tile').append(`<h3>${building.name} (lvl ${building.level})</h3>`)
+          const upgrade_button = $(`<button class="upgrade-building">Upgrade Building</button>`)
+
+          upgrade_button.click(() => {
+            console.log('click')
+            publish_action({
+              type: 'upgrade-building',
+              pos: selected_tile,
+            })
+          })
+
+          $('.selected-tile').append(upgrade_button)
         }
 
         workers.map(w => {

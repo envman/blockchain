@@ -2,9 +2,7 @@
 
 ## GAME
 
-- Move worker
 - Test Multiplayer
-- Recruitment center
 - Tax for encircle
 - Work at other players factory
 
@@ -19,7 +17,6 @@
 - Peer balancing (don't think you can do this, orchestration not allowed)
 
 ### Network connectivity
-- ping/pong
 - disconnect
 - random ports?
 

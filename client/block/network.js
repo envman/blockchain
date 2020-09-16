@@ -6,6 +6,7 @@ const createMessageHandler = require('./message_handler')
 
 module.exports = ({ port, known }, { load, save, have }) => {
   const peers = []
+  const addresses = []
 
   const data = {
     status: 'Disconnected',
@@ -38,9 +39,7 @@ module.exports = ({ port, known }, { load, save, have }) => {
   const server = net.createServer()
 
   const addPeer = peer => {
-    peer.on('close', () => {
-      peers.splice(peers.indexOf(peer), 1)
-    })
+    peer.on('close', () => peers.splice(peers.indexOf(peer), 1))
 
     peers.push(peer)
 
@@ -52,7 +51,7 @@ module.exports = ({ port, known }, { load, save, have }) => {
     //   })
     // })
 
-    const handler = createMessageHandler({ objects, network, broadcast, rumors })
+    const handler = createMessageHandler({ objects, network, broadcast, rumors, addresses })
 
     peer.on('message', msg => handler(msg, peer))
   }
@@ -75,10 +74,16 @@ module.exports = ({ port, known }, { load, save, have }) => {
   }
 
   server.on('connection', (connection) => {
+    // console.log('connection', connection.remoteAddress, connection.remotePort)
+
     const socket = new JsonSocket(connection)
 
     data.status = 'Connected'
-    addPeer(createPeer(socket))
+
+    const peer = createPeer(socket, connection.remoteAddress.split(':').pop())
+    addPeer(peer)
+
+    peer.send({ type: 'greet', port: data.port })
   })
 
   server.listen(port, function () {
