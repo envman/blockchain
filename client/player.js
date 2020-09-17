@@ -8,9 +8,9 @@ const user_options = {
   web_port: 8081,
   username: 'ENVMAN',
   port: 9002,
-  wipe: false,
+  wipe: true,
   data_root: path.join(__dirname, '..', 'player_data'),
-  // miner: true,
+  known: '127.0.0.1:9001'
 }
 
 client(user_options)

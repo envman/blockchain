@@ -1,3 +1,9 @@
+# TODO
+
+- Get External IP and send it out
+- Peer Managment
+- Multiple miners
+
 # Road Map
 
 ## V1.0
@@ -6,6 +12,7 @@
 - Multiple Miner Support
 - Network Times
 - Difficulty Managment
+- Get IP
 
 ## V2.0
 

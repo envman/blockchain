@@ -49,7 +49,7 @@ const createView = (existing, update) => {
         if (!handler.valid(a, view)) {
           return
         }
-  
+
         handler.update_view(a, view)
       } catch (error) {
         console.error('action', a)
@@ -170,7 +170,6 @@ module.exports = (opts) => {
                     return full_load(a)
                       .then(action => obj.object.actions.splice(obj.object.actions.indexOf(a), 1, action))
                   })
-
 
                   if (obj.object.previous !== default_meta.head) {
                     const update_previous = full_load(obj.object.previous)
@@ -312,6 +311,47 @@ module.exports = (opts) => {
 
       let miner
 
+      const update_miner = () => {
+        if (!miner) return
+
+        const proms = actions
+          .filter(a => !view.done.includes(a))
+          .map(a => load(a).then(x => {
+            if (!x) console.error(`cannot load ${a}`)
+
+            return x
+          }))
+
+        Promise.all(proms)
+          .then(todo => {
+            todo = todo.filter(a => {
+              const handler = action_handlers[a.object.type]
+
+              if (!handler) return false
+
+              try {
+                return handler.valid({ ...a.object, username: a.username }, view)
+              } catch (error) {
+                console.error('action', a)
+                console.error('view', view)
+
+                throw error
+              }
+            })
+
+            miner.send({
+              type: 'block',
+              body: {
+                type: 'block',
+                previous: meta.head,
+                difficulty: difficulty,
+                nonce: 0,
+                actions: todo.map(a => a.hash)
+              }
+            })
+          })
+      }
+
       if (opts.miner) {
         miner = fork('./block/miner')
 
@@ -357,42 +397,7 @@ module.exports = (opts) => {
                   hash: event.hash
                 })
 
-                const proms = actions
-                  .filter(a => !view.done.includes(a))
-                  .map(a => load(a).then(x => {
-                    if (!x) console.error(`cannot load ${a}`)
-
-                    return x
-                  }))
-
-                Promise.all(proms)
-                  .then(todo => {
-                    todo = todo.filter(a => {
-                      const handler = action_handlers[a.object.type]
-
-                      if (!handler) return false
-
-                      try {
-                        return handler.valid({ ...a.object, username: a.username }, view)  
-                      } catch (error) {
-                        console.error('action', a)
-                        console.error('view', view)
-
-                        throw error
-                      }
-                    })
-
-                    miner.send({
-                      type: 'block',
-                      body: {
-                        type: 'block',
-                        previous: meta.head,
-                        difficulty: difficulty,
-                        nonce: 0,
-                        actions: todo.map(a => a.hash)
-                      }
-                    })
-                  })
+                update_miner()
               })
           }
         })
@@ -431,25 +436,27 @@ module.exports = (opts) => {
               const pends = waiting_load.filter(x => x.hash === msg.hash)
               pends.map(x => x.loaded(msg))
 
-              if (pends.length < 1) {
-                full_load(msg.hash)
-                  .then(block => block_to_view(block))
-                  .then(potential => {
-                    if (potential.turn > view.turn) {
-                      view = potential
-                      meta.head = msg.hash
+              if (pends.length > 0) return
 
-                      if (!view.users.find(x => x.username === opts.username)) {
-                        console.log(`${opts.username} not registered`)
-                        publish({
-                          type: 'register-user',
-                          key: user.public(),
-                          username: opts.username,
-                        })
-                      }
-                    }
-                  })
-              }
+              full_load(msg.hash)
+                .then(block => block_to_view(block))
+                .then(potential => {
+                  if (potential.turn <= view.turn) return
+
+                  view = potential
+                  meta.head = msg.hash
+
+                  update_miner()
+
+                  if (!view.users.find(x => x.username === opts.username)) {
+                    console.log(`${opts.username} not registered`)
+                    publish({
+                      type: 'register-user',
+                      key: user.public(),
+                      username: opts.username,
+                    })
+                  }
+                })
             })
         }
       })
