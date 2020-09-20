@@ -50,7 +50,7 @@ const draw = ({ game, user }) => {
       ctx.fillRect(x * square.height, y * square.width, square.height, square.width)
 
       // ctx.fillStyle = colors[tile.style]
-      if (tile.owner === user.username) {
+      if (tile.owner === user.key) {
         ctx.fillStyle = colors[9]
       } else if (tile.owner) {
         ctx.fillStyle = colors[8]

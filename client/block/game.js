@@ -26,7 +26,7 @@ const createWorld = _ => {
 
 const createView = (existing, update) => {
   const view = existing || {
-    users: [],
+    users: {},
     world: createWorld(),
     done: [],
     turn: 0
@@ -35,7 +35,7 @@ const createView = (existing, update) => {
   if (update) {
     view.turn = view.turn + 1
 
-    update.actions.map(a => {
+    update.actions.map((a, i) => {
       view.done.push(a.hash)
 
       const handler = action_handlers[a.type]
@@ -46,11 +46,13 @@ const createView = (existing, update) => {
       }
 
       try {
-        if (!handler.valid(a, view)) {
+        if (!handler.valid(a, view, i === 0)) {
           return
         }
 
-        handler.update_view(a, view)
+        handler.update_view(a, view, i === 0)
+
+        // console.log('update_view', view.users)
       } catch (error) {
         console.error('action', a)
         console.error('view', view)
@@ -62,8 +64,6 @@ const createView = (existing, update) => {
     for (let column of view.world) {
       for (let tile of column) {
         for (let worker of tile.workers) {
-          const user = view.users.find(x => x.username === worker.username)
-
           if (worker.tick) {
             worker.tick()
           }
@@ -184,11 +184,11 @@ module.exports = (opts) => {
 
                   return Promise.all(proms)
                     .then(_ => {
-                      resolve({ ...obj.object, username: obj.username })
+                      resolve({ ...obj.object, user: obj.user })
                     })
                 }
 
-                return resolve({ ...obj.object, username: obj.username })
+                return resolve({ ...obj.object, user: obj.user })
               }
 
               awaiter.loaded = loaded
@@ -225,21 +225,12 @@ module.exports = (opts) => {
         return view
       }
 
-      const validateSignature = (msg, users) => {
+      const validateSignature = (msg) => {
         const signature = msg.signature
         const hash = msg.hash
-        const user_name = msg.username
+        const user = msg.user
 
-        const signer = users.find(x => x.username === user_name)
-
-        if (!signer) {
-          console.error(users)
-          throw new Error(`No Signer Found ${JSON.stringify(msg)}`)
-          return console.error(`No Signer Found ${JSON.stringify(msg)}`)
-        }
-
-        const valid = user.verify(hash, signature, signer.key)
-        return valid
+        return user.verify(hash, signature, user)
       }
 
       const createBlock = (view, msg, load, pending_actions) => new Promise((resolve, reject) => {
@@ -262,12 +253,10 @@ module.exports = (opts) => {
           load(a)
             .then(action => {
               const loaded = action => {
-                block.actions.splice(block.actions.indexOf(a), 1, { ...action.object, hash: a, username: action.username })
+                block.actions.splice(block.actions.indexOf(a), 1, { ...action.object, hash: a, user: action.user })
 
                 if (block.actions.every(x => x.type)) {
-                  const user_actions = block.actions.filter(x => x.type === 'register-user')
-                  // validateSignature(msg, [...view.users, ...user_actions.map(x => ({ username: x.username, key: x.key }))])
-
+                  // const user_actions = block.actions.filter(x => x.type === 'register-user')
                   // TODO: Check all actions valid within game!
 
                   resolve(block)
@@ -292,7 +281,7 @@ module.exports = (opts) => {
           object: msg,
           hash,
           signature,
-          username: opts.username,
+          user: user.public(),
         }
       }
 
@@ -300,6 +289,7 @@ module.exports = (opts) => {
         const message = objectMessage(msg)
 
         save(message.hash, message)
+        actions.push(message.hash)
 
         network.broadcast({
           type: 'publish',
@@ -330,7 +320,7 @@ module.exports = (opts) => {
               if (!handler) return false
 
               try {
-                return handler.valid({ ...a.object, username: a.username }, view)
+                return handler.valid({ ...a.object, user: a.user }, view)
               } catch (error) {
                 console.error('action', a)
                 console.error('view', view)
@@ -339,16 +329,29 @@ module.exports = (opts) => {
               }
             })
 
-            miner.send({
-              type: 'block',
-              body: {
-                type: 'block',
-                previous: meta.head,
-                difficulty: difficulty,
-                nonce: 0,
-                actions: todo.map(a => a.hash)
-              }
+            const coin_base = objectMessage({
+              type: 'transfer-money',
+              to: user.public(),
+              amount: 1,
+              stamp: shortid(),
             })
+
+            save(coin_base.hash, coin_base)
+              .then(_ => {
+                miner.send({
+                  type: 'block',
+                  body: {
+                    type: 'block',
+                    previous: meta.head,
+                    difficulty: difficulty,
+                    nonce: 0,
+                    actions: [
+                      coin_base.hash,
+                      ...todo.map(a => a.hash)
+                    ]
+                  }
+                })
+              })
           })
       }
 
@@ -356,24 +359,7 @@ module.exports = (opts) => {
         miner = fork('./block/miner')
 
         if (meta.head === default_meta.head) {
-          const msg = objectMessage({
-            type: 'register-user',
-            key: user.public(),
-            username: opts.username,
-          })
-
-          save(msg.hash, msg)
-
-          miner.send({
-            type: 'block',
-            body: {
-              type: 'block',
-              previous: meta.head,
-              difficulty: difficulty,
-              nonce: 0,
-              actions: [msg.hash]
-            }
-          })
+          update_miner()
         }
 
         miner.on('message', event => {
@@ -407,14 +393,6 @@ module.exports = (opts) => {
         const handler = action_handlers[msg.object.type]
 
         if (handler) {
-          const users = [...view.users]
-
-          if (msg.object.type === 'register-user') {
-            users.push({ username: msg.object.username, key: msg.object.key })
-          }
-
-          // validateSignature(msg, users)
-
           save(msg.hash, msg)
             .then(_ => {
               const pends = waiting_load.filter(x => x.hash === msg.hash)
@@ -447,15 +425,6 @@ module.exports = (opts) => {
                   meta.head = msg.hash
 
                   update_miner()
-
-                  if (!view.users.find(x => x.username === opts.username)) {
-                    console.log(`${opts.username} not registered`)
-                    publish({
-                      type: 'register-user',
-                      key: user.public(),
-                      username: opts.username,
-                    })
-                  }
                 })
             })
         }
@@ -464,8 +433,7 @@ module.exports = (opts) => {
       return {
         view: () => {
           const network_view = network.view()
-
-          const me = view.users.find(x => x.username === opts.username)
+          const me = view.users[user.public()]
 
           return {
             network: {
@@ -483,6 +451,7 @@ module.exports = (opts) => {
               workers: me && me.workers,
               cash: me && me.cash,
               members: me && me.members,
+              key: user.public(),
             },
 
             game: view
