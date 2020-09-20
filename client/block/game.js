@@ -6,6 +6,8 @@ const path = require('path')
 const h = require('./hash')
 const shortid = require('shortid')
 const action_handlers = require('./action_handlers')
+const names = require('./names')
+const createRandom = require('random-seed').create
 
 const createWorld = _ => {
   const world = []
@@ -17,6 +19,7 @@ const createWorld = _ => {
       world[x][y] = {
         style: 0,
         workers: [],
+        characters: [],
       }
     }
   }
@@ -33,6 +36,11 @@ const createView = (existing, update) => {
   }
 
   if (update) {
+    const random = createRandom(update.hash)
+    const chance = percent => random(100) <= percent
+
+    const first = view.turn === 0
+
     view.turn = view.turn + 1
 
     update.actions.map((a, i) => {
@@ -61,11 +69,46 @@ const createView = (existing, update) => {
       }
     })
 
+    // Game Start
+    if (first) {
+      const coin_base = update.actions[0]
+      const first_player = coin_base.user
+
+      const eden = view.world[0][0]
+
+      eden.characters.push({
+        name: 'Adam',
+        sex: 'M',
+        owner: first_player,
+      })
+
+      eden.characters.push({
+        name: 'Eve',
+        sex: 'F',
+        owner: first_player,
+      })
+    }
+
     for (let column of view.world) {
       for (let tile of column) {
-        for (let worker of tile.workers) {
-          if (worker.tick) {
-            worker.tick()
+        const owners = new Set()
+
+        tile.characters.map(x => owners.add(x.owner))
+
+        for (let owner of owners) {
+          const characters = tile.characters.filter(x => x.owner === owner).length
+
+          if (characters > 1) {
+            if (chance(10)) {
+              const baby = {
+                sex: chance(50) ? 'F' : 'M',
+                owner,
+              }
+
+              baby.name = names[baby.sex][random(names[baby.sex].length)]
+
+              tile.characters.push(baby)
+            }
           }
         }
       }
@@ -144,7 +187,6 @@ module.exports = (opts) => {
 
   return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts), loadMeta()])
     .then(([network, user]) => {
-
       const actions = []
       const pending_actions = []
 
@@ -164,6 +206,8 @@ module.exports = (opts) => {
                 if (!obj.object) {
                   throw new Error(`Invalid Object`)
                 }
+
+                obj.object.hash = obj.hash
 
                 if (obj.object.type === 'block') {
                   const proms = obj.object.actions.map(a => {
@@ -355,6 +399,19 @@ module.exports = (opts) => {
           })
       }
 
+      const update_view = (hash) => {
+        return full_load(hash)
+          .then(block => console.log('block') || block_to_view(block))
+          .then(potential => {
+            if (potential.turn <= view.turn) return
+
+            view = potential
+            meta.head = hash
+
+            update_miner()
+          })
+      }
+
       if (opts.miner) {
         miner = fork('./block/miner')
 
@@ -369,21 +426,8 @@ module.exports = (opts) => {
             const object = objectMessage(event.block)
 
             save(event.hash, object)
-
-            createBlock(view, object, load, pending_actions)
-              .then(block => {
-                const updated = view.apply(block) || view
-                view = updated
-
-                meta.head = event.hash
-
-                saveMeta(meta)
-                send({
-                  type: 'publish',
-                  hash: event.hash
-                })
-
-                update_miner()
+              .then(_ => {
+                update_view(event.hash)
               })
           }
         })
@@ -416,16 +460,7 @@ module.exports = (opts) => {
 
               if (pends.length > 0) return
 
-              full_load(msg.hash)
-                .then(block => block_to_view(block))
-                .then(potential => {
-                  if (potential.turn <= view.turn) return
-
-                  view = potential
-                  meta.head = msg.hash
-
-                  update_miner()
-                })
+              update_view(msg.hash)
             })
         }
       })

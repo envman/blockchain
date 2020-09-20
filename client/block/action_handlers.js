@@ -9,16 +9,6 @@ const getUser = (users, key) => {
 }
 
 module.exports = {
-  'baby': {
-    update_view: ({}) => {
-
-    },
-
-    valid: (a, view) => {
-      
-    }
-  },
-
   'purchase-land': {
     update_view: ({ pos, user }, view) => {
       view.world[pos.x][pos.y].owner = user

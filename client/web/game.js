@@ -127,15 +127,15 @@ $(() => {
     .then(x => {
       draw(x)
 
-      const { workers, members } = x.user
+      // const { workers, members } = x.user
 
-      workers > 0 ? $('.deploy-worker').show() : $('.deploy-worker').hide()
-      $('.deploy-worker').text(`Worker ${workers}`)
-      $('.deploy-worker').click(_ => mode = 'deploy-worker')
+      // workers > 0 ? $('.deploy-worker').show() : $('.deploy-worker').hide()
+      // $('.deploy-worker').text(`Worker ${workers}`)
+      // $('.deploy-worker').click(_ => mode = 'deploy-worker')
 
-      members > 0 ? $('.deploy-member').show() : $('.deploy-member').hide()
-      $('.deploy-member').text(`Member ${members}`)
-      $('.deploy-member').click(_ => mode = 'deploy-member')
+      // members > 0 ? $('.deploy-member').show() : $('.deploy-member').hide()
+      // $('.deploy-member').text(`Member ${members}`)
+      // $('.deploy-member').click(_ => mode = 'deploy-member')
 
       x.user.cash >= 4 ? $('.purchase-land').show() : $('.purchase-land').hide()
       $('.purchase-land').click(_ => mode = 'purchase-land')
@@ -161,9 +161,8 @@ $(() => {
 
         const tile = x.game.world[selected_tile.x][selected_tile.y]
 
-        const workers = tile.workers
+        const { characters, building } = tile
         const owner = tile.owner || 'None'
-        const building = tile.building
 
         $('.selected-tile').append(`<h3>${selected_tile.x}:${selected_tile.y} | Owner: ${owner}</h3>`)
 
@@ -182,22 +181,22 @@ $(() => {
           $('.selected-tile').append(upgrade_button)
         }
 
-        workers.map(w => {
-          $('.selected-tile').append(`<h4>${w.username}</h4>`)
+        characters.map(w => {
+          $('.selected-tile').append(`<h4>${w.name}</h4>`)
 
-          const span = $(`<span></span>`)
-          const button = $(`<button class="move-worker">Move Worker</button>`)
+          // const span = $(`<span></span>`)
+          // const button = $(`<button class="move-worker">Move Worker</button>`)
 
-          button.click(() => {
-            mode = 'move-worker'
-            mode_data = {
-              from: selected_tile
-            }
-          })
+          // button.click(() => {
+          //   mode = 'move-worker'
+          //   mode_data = {
+          //     from: selected_tile
+          //   }
+          // })
 
-          span.append(button)
+          // span.append(button)
 
-          $('.selected-tile').append(span)
+          // $('.selected-tile').append(span)
         })
       } else {
         $('.selected-tile').hide()
