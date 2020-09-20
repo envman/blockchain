@@ -186,5 +186,35 @@ module.exports = {
 
       return true
     }
-  }
+  },
+
+  // 'sell': {
+  //   update_view: ({ amount, to, user }, view, coin_base) => {
+  //     if (!coin_base) {
+  //       const from_user = view.users[user]
+  //       from_user.cash = from_user.cash - amount
+  //     }
+      
+  //     const to_user = getUser(view.users, to)
+  //     to_user.cash = to_user.cash + amount
+  //   },
+
+  //   valid: ({ amount, user }, view, coin_base) => {
+  //     if (coin_base) {
+  //       return amount === 1
+  //     }
+
+  //     const user_details = view.users[user]
+
+  //     if (!user_details) {
+  //       return false
+  //     }
+
+  //     if (user_details.cash < amount) {
+  //       return false
+  //     }
+
+  //     return true
+  //   }
+  // },
 }
