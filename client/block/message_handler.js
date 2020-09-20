@@ -1,4 +1,5 @@
 const h = require('./hash')
+const validate_signature = require('./validate_signature')
 
 module.exports = ({ objects, network, broadcast, rumors, addresses }) => {
   const network_messages = {
@@ -43,8 +44,11 @@ module.exports = ({ objects, network, broadcast, rumors, addresses }) => {
           const hash = h(msg.object)
 
           if (hash !== msg.hash) {
-            console.error(`Hash Mismatch h:${hash} msg:${msg.hash}`)
-            return
+            return console.error(`Hash Mismatch h:${hash} msg:${msg.hash}`)
+          }
+
+          if (!validate_signature(msg.hash, msg.signature, msg.user)) {
+            return console.error(`Invalid signature`)
           }
 
           network.emit('first_load', msg)

@@ -64,7 +64,7 @@ const draw = ({ game, user }) => {
       
       const cap = (tile.building && tile.building.level) || 1
 
-      ctx.fillText(`${tile.workers.length}/${cap}`, (x * square.width) + 2, (y * square.height) + 45)
+      ctx.fillText(`${tile.characters.length}`, (x * square.width) + 2, (y * square.height) + 45)
 
       if (tile.building) {
         ctx.font = '24px serif';
@@ -126,16 +126,6 @@ $(() => {
     .then(res => res.json())
     .then(x => {
       draw(x)
-
-      // const { workers, members } = x.user
-
-      // workers > 0 ? $('.deploy-worker').show() : $('.deploy-worker').hide()
-      // $('.deploy-worker').text(`Worker ${workers}`)
-      // $('.deploy-worker').click(_ => mode = 'deploy-worker')
-
-      // members > 0 ? $('.deploy-member').show() : $('.deploy-member').hide()
-      // $('.deploy-member').text(`Member ${members}`)
-      // $('.deploy-member').click(_ => mode = 'deploy-member')
 
       x.user.cash >= 4 ? $('.purchase-land').show() : $('.purchase-land').hide()
       $('.purchase-land').click(_ => mode = 'purchase-land')

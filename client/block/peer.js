@@ -1,4 +1,6 @@
 const EventEmitter = require('events')
+const h = require('./hash')
+const vaidate_signature = require('./validate_signature')
 
 const alive_time = 60000 * 2
 
@@ -33,13 +35,10 @@ module.exports = (connection, host) => {
     reset_dead()
 
     if (message.type === 'ping') {
-      console.log('ping')
-
       return peer.send({ type: 'pong' })
     }
 
     if (message.type === 'pong') {
-      console.log('pong')
       return
     }
 

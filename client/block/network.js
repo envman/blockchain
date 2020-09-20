@@ -1,6 +1,6 @@
 const net = require('net')
 const { EventEmitter } = require('events')
-JsonSocket = require('json-socket')
+const JsonSocket = require('json-socket')
 const createPeer = require('./peer')
 const createMessageHandler = require('./message_handler')
 
