@@ -30,7 +30,7 @@ module.exports = ({ objects, network, broadcast, rumors, addresses }) => {
               hash: msg.hash,
               object: object.object,
               signature: object.signature,
-              username: object.username,
+              user: object.user,
             })
           }
         })

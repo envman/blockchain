@@ -2,6 +2,7 @@ const getUser = (users, key) => {
   if (!users[key]) {
     users[key] = {
       cash: 0,
+      assets: [],
     }
   }
 
@@ -158,20 +159,31 @@ module.exports = {
     }
   },
 
-  'transfer-money': {
-    update_view: ({ amount, to, user }, view, coin_base) => {
-      if (!coin_base) {
-        const from_user = view.users[user]
-        from_user.cash = from_user.cash - amount
+  'transaction': {
+    update_view: ({ input, to, user }, view, coin_base) => {
+      const to_user = getUser(view.users, to)
+
+      if (coin_base) {
+        to_user.cash = to_user.cash + Number(input.amount)
+        return
       }
       
-      const to_user = getUser(view.users, to)
-      to_user.cash = to_user.cash + amount
+      const from_user = view.users[user]
+      
+      if (input.type === 'cash') {
+        from_user.cash = from_user.cash - Number(input.amount)
+        to_user.cash = to_user.cash + Number(input.amount)
+      }
+
+      if (input.type === 'asset') {
+        from_user.assets = from_user.assets.filter(x => x !== input.hash)
+        to_user.assets.push(input.hash)
+      }
     },
 
-    valid: ({ amount, user }, view, coin_base) => {
+    valid: ({ input, user }, view, coin_base) => {
       if (coin_base) {
-        return amount === 1
+        return input.type === 'cash' && input.amount === 1
       }
 
       const user_details = view.users[user]
@@ -180,41 +192,15 @@ module.exports = {
         return false
       }
 
-      if (user_details.cash < amount) {
-        return false
+      if (input.type === 'cash') {
+        if (user_details.cash < input.amount) return false
+      }
+
+      if (input.type === 'asset') {
+        if (!user_details.assets.find(x => x === input.hash)) return false
       }
 
       return true
     }
   },
-
-  // 'sell': {
-  //   update_view: ({ amount, to, user }, view, coin_base) => {
-  //     if (!coin_base) {
-  //       const from_user = view.users[user]
-  //       from_user.cash = from_user.cash - amount
-  //     }
-      
-  //     const to_user = getUser(view.users, to)
-  //     to_user.cash = to_user.cash + amount
-  //   },
-
-  //   valid: ({ amount, user }, view, coin_base) => {
-  //     if (coin_base) {
-  //       return amount === 1
-  //     }
-
-  //     const user_details = view.users[user]
-
-  //     if (!user_details) {
-  //       return false
-  //     }
-
-  //     if (user_details.cash < amount) {
-  //       return false
-  //     }
-
-  //     return true
-  //   }
-  // },
 }

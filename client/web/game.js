@@ -61,10 +61,8 @@ const draw = ({ game, user }) => {
 
       ctx.font = '14px serif';
       ctx.fillStyle = "#000000"
-      
-      const cap = (tile.building && tile.building.level) || 1
 
-      ctx.fillText(`${tile.characters.length}`, (x * square.width) + 2, (y * square.height) + 45)
+      // ctx.fillText(`${tile.characters.length}`, (x * square.width) + 2, (y * square.height) + 45)
 
       if (tile.building) {
         ctx.font = '24px serif';
@@ -151,7 +149,7 @@ $(() => {
 
         const tile = x.game.world[selected_tile.x][selected_tile.y]
 
-        const { characters, building } = tile
+        const { assets, building } = tile
         const owner = tile.owner || 'None'
 
         $('.selected-tile').append(`<h3>${selected_tile.x}:${selected_tile.y} | Owner: ${owner}</h3>`)
@@ -171,8 +169,9 @@ $(() => {
           $('.selected-tile').append(upgrade_button)
         }
 
-        characters.map(w => {
-          $('.selected-tile').append(`<h4>${w.name}</h4>`)
+        assets.map(w => {
+          const asset = x.game.assets[w]
+          $('.selected-tile').append(`<h4>${asset.name}</h4>`)
 
           // const span = $(`<span></span>`)
           // const button = $(`<button class="move-worker">Move Worker</button>`)
@@ -192,14 +191,22 @@ $(() => {
         $('.selected-tile').hide()
       }
 
-      x.game.users
-        .sort((a, b) => b.cash - a.cash)
-        .slice(0, 10)
-        .filter(x => x.cash > 0)
-        .map((x, i) => {
-          $(`.player-${i + 1}`).html(x.username)
-          $(`.player-${i + 1}-cash`).html(x.cash)
-        })
+      // x.game.users
+      //   .sort((a, b) => b.cash - a.cash)
+      //   .slice(0, 10)
+      //   .filter(x => x.cash > 0)
+      //   .map((x, i) => {
+      //     $(`.player-${i + 1}`).html(x.username)
+      //     $(`.player-${i + 1}-cash`).html(x.cash)
+      //   })
+
+      $('.trades').empty()
+
+      x.game.trades.map(x => {
+        $('.trades').append(`<div>${x.type}</div>`)
+      })
+
+      // console.log(x.game.trades)
 
       setTimeout(update, 500)
     })

@@ -9,7 +9,7 @@ module.exports = opts => {
 
   app.use(bodyParser.json())
 
-  createGame({ port: 9001, known: '127.0.0.1:9000', wipe: true, ...opts, miner: true })
+  createGame({ port: 9001, known: '127.0.0.1:9000', wipe: true, miner: true, ...opts })
     .then(game => {
       app.get('/test', (req, res) => {
         res.send('hello')
@@ -24,6 +24,11 @@ module.exports = opts => {
 
       app.get('/dev', (req, res) => {
         fs.readFile(path.join(__dirname, 'web', 'dev.html'), 'utf8')
+          .then(x => res.send(x))
+      })
+
+      app.get('/trades', (req, res) => {
+        fs.readFile(path.join(__dirname, 'web', 'trades.html'), 'utf8')
           .then(x => res.send(x))
       })
 

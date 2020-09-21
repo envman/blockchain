@@ -7,6 +7,7 @@ const h = require('./hash')
 const shortid = require('shortid')
 const action_handlers = require('./action_handlers')
 const createView = require('./view')
+const wallet = require('./wallet')
 
 const difficulty = 3
 
@@ -263,9 +264,12 @@ module.exports = (opts) => {
             })
 
             const coin_base = objectMessage({
-              type: 'transfer-money',
+              type: 'transaction',
               to: user.public(),
-              amount: 1,
+              input: {
+                type: 'cash',
+                amount: 1,
+              },
               stamp: shortid(),
             })
 
@@ -290,7 +294,7 @@ module.exports = (opts) => {
 
       const update_view = (hash) => {
         return full_load(hash)
-          .then(block => console.log('block') || block_to_view(block))
+          .then(block => block_to_view(block))
           .then(potential => {
             if (potential.turn <= view.turn) return
 
@@ -316,6 +320,11 @@ module.exports = (opts) => {
 
             save(event.hash, object)
               .then(_ => {
+                network.broadcast({
+                  type: 'publish',
+                  hash: event.hash
+                })
+                
                 update_view(event.hash)
               })
           }
@@ -376,6 +385,7 @@ module.exports = (opts) => {
               cash: me && me.cash,
               members: me && me.members,
               key: user.public(),
+              assets: me &&  me.assets,
             },
 
             game: view
@@ -386,6 +396,21 @@ module.exports = (opts) => {
           action.stamp = shortid()
 
           publish(action)
+        },
+
+        contract: ({ amount, type }) => {
+          wallet.generate_address()
+            .then(address => {
+              const contract = {
+                type,
+                amount,
+                asset,
+                contract_address: address.public,
+                stamp: shortid(),
+              }
+
+              publish(contract)
+            })
         },
 
         chain: _ => {

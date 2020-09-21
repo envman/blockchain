@@ -10,7 +10,8 @@ const user_options = {
   port: 9002,
   wipe: true,
   data_root: path.join(__dirname, '..', 'player_data'),
-  known: '127.0.0.1:9001'
+  known: '127.0.0.1:9001',
+  miner: false
 }
 
 client(user_options)
