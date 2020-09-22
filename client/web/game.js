@@ -49,20 +49,22 @@ const draw = ({ game, user }) => {
       
       ctx.fillRect(x * square.height, y * square.width, square.height, square.width)
 
-      // ctx.fillStyle = colors[tile.style]
-      if (tile.owner === user.key) {
-        ctx.fillStyle = colors[9]
-      } else if (tile.owner) {
-        ctx.fillStyle = colors[8]
-      } else {
-        ctx.fillStyle = colors[0]
+      ctx.fillStyle = colors[tile.style]
+
+      if (tile.resources.tree) {
+        ctx.fillStyle = 'gray'
       }
+
+      if (tile.resources.stone) {
+        ctx.fillStyle = 'green'
+      }
+
       ctx.fillRect((x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
 
       ctx.font = '14px serif';
       ctx.fillStyle = "#000000"
 
-      // ctx.fillText(`${tile.characters.length}`, (x * square.width) + 2, (y * square.height) + 45)
+      ctx.fillText(`${tile.assets.length}`, (x * square.width) + 2, (y * square.height) + 45)
 
       if (tile.building) {
         ctx.font = '24px serif';
@@ -124,20 +126,6 @@ $(() => {
     .then(res => res.json())
     .then(x => {
       draw(x)
-
-      x.user.cash >= 4 ? $('.purchase-land').show() : $('.purchase-land').hide()
-      $('.purchase-land').click(_ => mode = 'purchase-land')
-
-      x.user.cash >= 8 ? $('.build-factory').show() : $('.build-factory').hide()
-      $('.build-factory').click(_ => mode = 'build-factory')
-
-      x.user.cash >= 20 ? $('.build-recruiter').show() : $('.build-recruiter').hide()
-      $('.build-recruiter').click(_ => mode = 'build-recruiter')
-
-      x.user.cash >= 40 ? $('.build-hq').show() : $('.build-hq').hide()
-      $('.build-hq').click(_ => mode = 'build-hq')
-
-      $('.move-worker').click(_ => mode = 'move-worker')
 
       $('.user').text(`User: ${x.user.username}`)
       $('.turn').text(`Turn: ${x.game.turn}`)

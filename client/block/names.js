@@ -31,6 +31,7 @@ module.exports = {
     'Alexia',
     'Alianor',
     'Alice',
+    'Charlotte',
     'Cristiana',
     'Elizabeth',
     'Eve',
