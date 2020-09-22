@@ -47,8 +47,15 @@ module.exports = ({ objects, network, broadcast, rumors, addresses }) => {
             return console.error(`Hash Mismatch h:${hash} msg:${msg.hash}`)
           }
 
-          if (!validate_signature(msg.hash, msg.signature, msg.user)) {
-            return console.error(`Invalid signature`)
+          try {
+            if (!validate_signature(msg.hash, msg.signature, msg.user)) {
+              return console.error(`Invalid signature`)
+            }
+          } catch (error) {
+            console.error('Error validating signature')
+            console.error(JSON.stringify(msg, null, 2))
+
+            throw error
           }
 
           network.emit('first_load', msg)

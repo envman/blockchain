@@ -30,12 +30,16 @@ const loadImage = image => {
 
 let tree
 let grass
+let stone
 
 loadImage('/img/tree.png')
   .then(x => tree = x)
 
 loadImage('/img/grass.png')
   .then(x => grass = x)
+
+loadImage('/img/stone.png')
+  .then(x => stone = x)
 
 const window_size = {
   height: 800,
@@ -96,6 +100,10 @@ const draw = ({ game, user }) => {
 
       if (tile.resources.tree && tree) {
         ctx.drawImage(tree, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
+
+      if (tile.resources.stone && stone) {
+        ctx.drawImage(stone, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
     }
   }

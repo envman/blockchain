@@ -159,14 +159,6 @@ module.exports = (opts) => {
         return view
       }
 
-      const validateSignature = (msg) => {
-        const signature = msg.signature
-        const hash = msg.hash
-        const user = msg.user
-
-        return user.verify(hash, signature, user)
-      }
-
       const createBlock = (view, msg, load, pending_actions) => new Promise((resolve, reject) => {
         // TODO: Timeout?
 
