@@ -20,6 +20,23 @@ const colors = {
   15: '#FFCDF3',
 }
 
+const loadImage = image => {
+  return new Promise((resolve, _) => {
+    const img = new Image()
+    img.src = image
+    img.onload = _ => resolve(img)
+  })
+}
+
+let tree
+let grass
+
+loadImage('/img/tree.png')
+  .then(x => tree = x)
+
+loadImage('/img/grass.png')
+  .then(x => grass = x)
+
 const window_size = {
   height: 800,
   width: 800
@@ -49,17 +66,22 @@ const draw = ({ game, user }) => {
       
       ctx.fillRect(x * square.height, y * square.width, square.height, square.width)
 
-      ctx.fillStyle = colors[tile.style]
+      // ctx.fillStyle = colors[tile.style]
+      ctx.fillStyle = 'green'
 
-      if (tile.resources.tree) {
-        ctx.fillStyle = 'gray'
+      // if (tile.resources.tree) {
+      //   ctx.fillStyle = 'blue'
+      // }
+
+      // if (tile.resources.stone) {
+      //   ctx.fillStyle = 'gray'
+      // }
+
+      if (grass) {
+        ctx.drawImage(grass, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
-      if (tile.resources.stone) {
-        ctx.fillStyle = 'green'
-      }
-
-      ctx.fillRect((x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      // ctx.fillRect((x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
 
       ctx.font = '14px serif';
       ctx.fillStyle = "#000000"
@@ -70,6 +92,10 @@ const draw = ({ game, user }) => {
         ctx.font = '24px serif';
         ctx.fillStyle = "#000000"
         ctx.fillText(tile.building.code, (x * square.width) + 20, (y * square.height) + 25)
+      }
+
+      if (tile.resources.tree && tree) {
+        ctx.drawImage(tree, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
     }
   }
