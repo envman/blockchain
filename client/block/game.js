@@ -1,14 +1,15 @@
-const createNetwork = require('./network')
 const fork = require('child_process').fork
-const createUser = require('./user')
 const fs = require('fs-extra')
 const path = require('path')
-const h = require('./hash')
 const shortid = require('shortid')
-const action_handlers = require('./action_handlers')
+
+const h = require('./hash')
 const createView = require('./view')
+const createNetwork = require('./network')
+const createUser = require('./user')
 const wallet = require('./wallet')
 const create_loader = require('./loader')
+const action_handlers = require('./action_handlers')
 const default_meta = require('./default_meta')
 
 const difficulty = 3
@@ -54,33 +55,64 @@ module.exports = (opts) => {
     .then(x => JSON.stringify(x, null, 2))
     .then(x => fs.writeFile(path.join(save_dir, `${hash}.json`), x))
 
-  return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts), load_meta()])
-    .then(([network, user, meta]) => {
+  const block_to_view = block => {
+    const chain = []
+    chain.unshift(block)
+
+    let previous = block.previous
+    while (previous) {
+      chain.unshift(previous)
+
+      previous = previous.previous
+    }
+
+    let view = createView()
+
+    for (let current of chain) {
+      view = view.apply(current) || view
+    }
+
+    return view
+  }
+
+  const create_update_view = full_load => {
+    return (hash, view) => {
+      return full_load(hash)
+        .then(block => block_to_view(block))
+        .then(potential => {
+          if (potential.turn <= view.turn) return
+  
+          view = potential
+          meta.head = hash
+  
+          save_meta(meta)
+            .then(_ => {
+              update_miner()
+            })
+        })
+    }
+  }
+
+  return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts)])
+    .then(([network, user]) => {
+      const { full_load, network_loaded } = create_loader(network, load)
+      const update_view = create_update_view(full_load)
+
+      return load_meta()
+        .then(meta => {
+          if (meta.head === default_meta.head) {
+
+          }
+
+          return { meta }
+        })
+        .then(({ meta }) => {
+          return { network, user, meta, full_load, network_loaded, update_view }
+        })
+    })
+    .then(({ network, user, meta, full_load, network_loaded, update_view }) => {
       const actions = []
       let view = createView()
-
-      const { full_load, network_loaded } = create_loader(network, load)
-
-      // Block is the latest
-      const block_to_view = block => {
-        const chain = []
-        chain.unshift(block)
-
-        let previous = block.previous
-        while (previous) {
-          chain.unshift(previous)
-
-          previous = previous.previous
-        }
-
-        let view = createView()
-
-        for (let current of chain) {
-          view = view.apply(current) || view
-        }
-
-        return view
-      }
 
       const objectMessage = (msg) => {
         const hash = h(msg)
@@ -165,22 +197,6 @@ module.exports = (opts) => {
           })
       }
 
-      const update_view = (hash) => {
-        return full_load(hash)
-          .then(block => block_to_view(block))
-          .then(potential => {
-            if (potential.turn <= view.turn) return
-
-            view = potential
-            meta.head = hash
-
-            save_meta(meta)
-              .then(_ => {
-                update_miner()
-              })
-          })
-      }
-
       if (opts.miner) {
         miner = fork('./block/miner')
 
@@ -201,7 +217,7 @@ module.exports = (opts) => {
                   hash: event.hash
                 })
 
-                update_view(event.hash)
+                update_view(event.hash, view)
               })
           }
         })
@@ -225,7 +241,7 @@ module.exports = (opts) => {
               const complete = network_loaded(msg.hash)
 
               if (complete) {
-                update_view(msg.hash)
+                update_view(msg.hash, view)
               }
             })
         }
