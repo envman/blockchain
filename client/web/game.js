@@ -46,8 +46,8 @@ const window_size = {
   width: 800
 }
 
-const height = 16
-const width = 16
+const height = 32
+const width = 32
 
 const square = {
   width: window_size.width / width,
@@ -60,32 +60,21 @@ const draw = ({ game, user }) => {
 
     for (let tile of column) {
       const y = column.indexOf(tile)
-      
+
       ctx.fillStyle = "#000000"
       if (selected_tile) {
         if (selected_tile.x === x && selected_tile.y === y) {
           ctx.fillStyle = colors[9]
         }
       }
-      
+
       ctx.fillRect(x * square.height, y * square.width, square.height, square.width)
 
-      // ctx.fillStyle = colors[tile.style]
       ctx.fillStyle = 'green'
-
-      // if (tile.resources.tree) {
-      //   ctx.fillStyle = 'blue'
-      // }
-
-      // if (tile.resources.stone) {
-      //   ctx.fillStyle = 'gray'
-      // }
 
       if (grass) {
         ctx.drawImage(grass, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
-
-      // ctx.fillRect((x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
 
       ctx.font = '14px serif';
       ctx.fillStyle = "#000000"
@@ -112,6 +101,8 @@ const draw = ({ game, user }) => {
 let mode
 let mode_data
 let selected_tile
+let selected_character
+let selector
 
 const publish_action = action => {
   console.log('action', action)
@@ -137,104 +128,149 @@ canvas.addEventListener('click', e => {
     y: Math.floor(y / square.height),
   }
 
-  if (!mode) {
+  if (selector) {
+    selector(pos)
+  } else {
     selected_tile = pos
-
-    return
   }
-
-  const data = mode_data || {}
-
-  const body = {
-    type: mode,
-    pos,
-    ...data
-  }
-
-  publish_action(body)
 })
+
+let current_steps = []
+
+let current_action
 
 $(() => {
   const update = () => {
     fetch(`${window.location.origin}/view`, {})
-    .then(res => res.json())
-    .then(x => {
-      draw(x)
+      .then(res => res.json())
+      .then(x => {
+        draw(x)
 
-      $('.user').text(`User: ${x.user.username}`)
-      $('.turn').text(`Turn: ${x.game.turn}`)
-      $('.cash').html(x.user.cash)
+        $('.user').text(`User: ${x.user.username}`)
+        $('.turn').text(`Turn: ${x.game.turn}`)
+        $('.cash').html(x.user.cash)
 
-      if (selected_tile) {
-        $('.selected-tile').show()
-        $('.selected-tile').empty()
+        $('.action-builder').empty()
 
-        const tile = x.game.world[selected_tile.x][selected_tile.y]
-
-        const { assets, building } = tile
-        const owner = tile.owner || 'None'
-
-        $('.selected-tile').append(`<h3>${selected_tile.x}:${selected_tile.y} | Owner: ${owner}</h3>`)
-
-        if (building) {
-          $('.selected-tile').append(`<h3>${building.name} (lvl ${building.level})</h3>`)
-          const upgrade_button = $(`<button class="upgrade-building">Upgrade Building</button>`)
-
-          upgrade_button.click(() => {
-            console.log('click')
-            publish_action({
-              type: 'upgrade-building',
-              pos: selected_tile,
-            })
-          })
-
-          $('.selected-tile').append(upgrade_button)
+        const action = current_action && current_action()
+        if (action) {
+          $('.action-builder').append(`<h3>${action.name}<h3>`)
         }
 
-        assets.map(w => {
-          const asset = x.game.assets[w]
-          $('.selected-tile').append(`<h4>${asset.name}</h4>`)
+        const characters = x.user.assets.map(a => ({ hash: a, character: x.game.assets[a].asset }))
 
-          // const span = $(`<span></span>`)
-          // const button = $(`<button class="move-worker">Move Worker</button>`)
+        $('.characters').empty()
+        if (selected_character) {
+          $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
 
-          // button.click(() => {
-          //   mode = 'move-worker'
-          //   mode_data = {
-          //     from: selected_tile
-          //   }
-          // })
+          const chop_button = $('<button>chop</button>')
+          chop_button.click(_ => {
+            const action = {
+              type: 'chop',
+              character: selected_character.hash
+            }
 
-          // span.append(button)
+            const selectPosition = (name, done) => {
 
-          // $('.selected-tile').append(span)
+              return {
+                name,
+                activate: (completed) => {
+                  console.log(`${name} activated`)
+
+                  selector = (...p) => {
+                    console.log(`${name} selected ${JSON.stringify(p)}`)
+
+                    done(...p)
+                    completed()
+                  }
+                },
+              }
+            }
+
+            current_steps = [
+              selectPosition('Select resource location', x => action.pos = x),
+              selectPosition('Select target location', x => action.to = x),
+              {
+                activate: (completed) => {
+                  publish_action(action)
+                    .then(_ => completed())
+                }
+              }
+            ]
+
+            let current
+
+            current_action = () => {
+              if (!current) {
+                current = current_steps[0]
+                current.activate(() => {
+                  current = undefined
+                  current_steps.shift()
+                })
+              }
+
+              return current
+            }
+          })
+
+          $('.characters').append(chop_button)
+        } else {
+          characters.map(({ hash, character }) => {
+            const character_button = $(`<div><button>${character.name}</button></div>`)
+
+            character_button.click(_ => {
+              selected_character = { hash, character }
+            })
+
+            $('.characters').append(character_button)
+          })
+        }
+
+        if (selected_tile) {
+          $('.selected-tile').show()
+          $('.selected-tile').empty()
+
+          const tile = x.game.world[selected_tile.x][selected_tile.y]
+
+          const { assets, building } = tile
+          const owner = tile.owner || 'None'
+
+          $('.selected-tile').append(`<h3>${selected_tile.x}:${selected_tile.y} | Owner: ${owner}</h3>`)
+
+          if (building) {
+            $('.selected-tile').append(`<h3>${building.name} (lvl ${building.level})</h3>`)
+            const upgrade_button = $(`<button class="upgrade-building">Upgrade Building</button>`)
+
+            upgrade_button.click(() => {
+              console.log('click')
+              publish_action({
+                type: 'upgrade-building',
+                pos: selected_tile,
+              })
+            })
+
+            $('.selected-tile').append(upgrade_button)
+          }
+
+          assets.map(w => {
+            const asset = x.game.assets[w]
+            $('.selected-tile').append(`<h4>${asset.name}</h4>`)
+          })
+        } else {
+          $('.selected-tile').hide()
+        }
+
+        $('.trades').empty()
+
+        x.game.trades.map(x => {
+          $('.trades').append(`<div>${x.type}</div>`)
         })
-      } else {
-        $('.selected-tile').hide()
-      }
 
-      // x.game.users
-      //   .sort((a, b) => b.cash - a.cash)
-      //   .slice(0, 10)
-      //   .filter(x => x.cash > 0)
-      //   .map((x, i) => {
-      //     $(`.player-${i + 1}`).html(x.username)
-      //     $(`.player-${i + 1}-cash`).html(x.cash)
-      //   })
-
-      $('.trades').empty()
-
-      x.game.trades.map(x => {
-        $('.trades').append(`<div>${x.type}</div>`)
+        setTimeout(update, 500)
       })
-
-      // console.log(x.game.trades)
-
-      setTimeout(update, 500)
-    })
-    .catch(() => {
-      setTimeout(update, 500)
-    })
+      .catch(() => {
+        setTimeout(update, 500)
+      })
   }
 
   setTimeout(update, 500)

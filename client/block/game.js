@@ -27,32 +27,15 @@ module.exports = (opts) => {
 
   const have = hash => fs.exists(path.join(save_dir, `${hash}.json`))
 
-  const saveMeta = (meta) => {
+  const save_meta = (meta) => {
     return fs.writeFile(path.join(save_dir, 'meta.json'), JSON.stringify(meta))
   }
 
-  const loadMeta = () => {
+  const load_meta = () => {
     return fs.exists(meta_path)
       .then(exists => exists || fs.writeFile(meta_path, JSON.stringify(default_meta)))
       .then(_ => fs.readFile(meta_path, 'utf8'))
       .then(JSON.parse)
-      .then(meta => {
-        if (meta.head === default_meta.head) {
-          return { meta }
-        }
-
-        return { meta }
-      })
-  }
-
-  const load_meta = () => {
-    if (!fs.existsSync(meta_path)) {
-      fs.writeFileSync(meta_path, JSON.stringify(default_meta))
-    }
-
-    const meta = JSON.parse(fs.readFileSync(meta_path, 'utf8'))
-
-    return { meta }
   }
 
   const load = hash => {
@@ -73,10 +56,8 @@ module.exports = (opts) => {
     .then(x => JSON.stringify(x, null, 2))
     .then(x => fs.writeFile(path.join(save_dir, `${hash}.json`), x))
 
-  const { meta } = load_meta()
-
-  return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts), loadMeta()])
-    .then(([network, user]) => {
+  return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts), load_meta()])
+    .then(([network, user, meta]) => {
       const actions = []
       const pending_actions = []
 
@@ -223,8 +204,6 @@ module.exports = (opts) => {
         })
       }
 
-      const send = msg => network.broadcast(msg)
-
       let miner
 
       const update_miner = () => {
@@ -293,7 +272,10 @@ module.exports = (opts) => {
             view = potential
             meta.head = hash
 
-            update_miner()
+            save_meta(meta)
+              .then(_ => {
+                update_miner()
+              })
           })
       }
 
@@ -377,7 +359,7 @@ module.exports = (opts) => {
               cash: me && me.cash,
               members: me && me.members,
               key: user.public(),
-              assets: me &&  me.assets,
+              assets: me && me.assets,
             },
 
             game: view

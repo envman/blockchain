@@ -10,10 +10,10 @@ const createWorld = _ => {
 
   const world = []
 
-  for (let x = 0; x < 16; x++) {
+  for (let x = 0; x < 32; x++) {
     world[x] = []
 
-    for (let y = 0; y < 16; y++) {
+    for (let y = 0; y < 32; y++) {
       let resource
 
       if (chance(10)) {
@@ -51,6 +51,21 @@ const createView = (existing, update) => {
     turn: 0,
     trades: [],
     assets: {},
+  }
+
+  view.add_asset = asset => {
+    const hash = h(asset)
+
+    view.assets[hash] = {
+      asset,
+      state: {},
+      hash,
+      set_goal: () => {
+        
+      }
+    }
+
+    return hash
   }
 
   if (update) {
@@ -98,8 +113,7 @@ const createView = (existing, update) => {
         dad: blank_hash,
       }
 
-      const adam_hash = h(adam)
-      view.assets[adam_hash] = adam
+      const adam_hash = view.add_asset(adam)
       first_player.assets.push(adam_hash)
       eden.assets.push(adam_hash)
 
@@ -111,8 +125,7 @@ const createView = (existing, update) => {
         dad: blank_hash,
       }
       
-      const eve_hash = h(eve)
-      view.assets[eve_hash] = eve
+      const eve_hash = view.add_asset(eve)
       first_player.assets.push(eve_hash)
       eden.assets.push(eve_hash)
     }
@@ -137,14 +150,14 @@ const createView = (existing, update) => {
         .map(x => view.assets[x])
 
       const characters = assets
-        .filter(x => x.type === 'character')
+        .filter(x => x.asset.type === 'character')
         .map(x => {
-          const hash = h(x)
+          const hash = x.hash
 
           return {
             hash,
             location: find(hash),
-            asset: x,
+            asset: x.asset,
           }
         })
 
@@ -169,7 +182,7 @@ const createView = (existing, update) => {
     
           const baby_hash = h(baby)
           if (!view.assets[baby_hash]) { // No duplicate babys!
-            view.assets[baby_hash] = baby
+            view.add_asset(baby)
             user.assets.push(baby_hash)
             view.world[current.location.x][current.location.y].assets.push(baby_hash)
           }
