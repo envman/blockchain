@@ -8,6 +8,8 @@ const shortid = require('shortid')
 const action_handlers = require('./action_handlers')
 const createView = require('./view')
 const wallet = require('./wallet')
+const create_loader = require('./loader')
+const default_meta = require('./default_meta')
 
 const difficulty = 3
 
@@ -20,10 +22,6 @@ module.exports = (opts) => {
   }
 
   fs.mkdirpSync(save_dir)
-
-  let default_meta = {
-    head: '0000000000000000000000000000000000000000000000000000000000000000'
-  }
 
   const have = hash => fs.exists(path.join(save_dir, `${hash}.json`))
 
@@ -59,65 +57,9 @@ module.exports = (opts) => {
   return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts), load_meta()])
     .then(([network, user, meta]) => {
       const actions = []
-      const pending_actions = []
-
-      const waiting_load = []
-
       let view = createView()
 
-      const full_load = hash => {
-        return load(hash)
-          .then(object => {
-            return new Promise(resolve => {
-              const awaiter = { hash }
-
-              const loaded = obj => {
-                waiting_load.splice(waiting_load.indexOf(awaiter, 1))
-
-                if (!obj.object) {
-                  throw new Error(`Invalid Object`)
-                }
-
-                obj.object.hash = obj.hash
-
-                if (obj.object.type === 'block') {
-                  const proms = obj.object.actions.map(a => {
-                    return full_load(a)
-                      .then(action => obj.object.actions.splice(obj.object.actions.indexOf(a), 1, action))
-                  })
-
-                  if (obj.object.previous !== default_meta.head) {
-                    const update_previous = full_load(obj.object.previous)
-                      .then(p => {
-                        obj.object.previous = p
-                      })
-
-                    proms.push(update_previous)
-                  } else {
-                    delete obj.object.previous
-                  }
-
-                  return Promise.all(proms)
-                    .then(_ => {
-                      resolve({ ...obj.object, user: obj.user })
-                    })
-                }
-
-                return resolve({ ...obj.object, user: obj.user })
-              }
-
-              awaiter.loaded = loaded
-
-              waiting_load.push(awaiter)
-
-              if (!object) {
-                network.request(hash)
-              } else {
-                loaded(object)
-              }
-            })
-          })
-      }
+      const { full_load, network_loaded } = create_loader(network, load)
 
       // Block is the latest
       const block_to_view = block => {
@@ -139,46 +81,6 @@ module.exports = (opts) => {
 
         return view
       }
-
-      const createBlock = (view, msg, load, pending_actions) => new Promise((resolve, reject) => {
-        // TODO: Timeout?
-
-        const block = {
-          ...msg.object,
-          actions: msg.object.actions.slice()
-        }
-
-        if (msg.object.actions.length < 1) {
-          return resolve(block)
-        }
-
-        msg.object.actions.map(a => {
-          if (!a) {
-            throw new Error(`Null action`)
-          }
-
-          load(a)
-            .then(action => {
-              const loaded = action => {
-                block.actions.splice(block.actions.indexOf(a), 1, { ...action.object, hash: a, user: action.user })
-
-                if (block.actions.every(x => x.type)) {
-                  // const user_actions = block.actions.filter(x => x.type === 'register-user')
-                  // TODO: Check all actions valid within game!
-
-                  resolve(block)
-                }
-              }
-
-              if (!action) {
-                pending_actions.push({ hash: a, done: loaded })
-                network.request(a)
-              } else {
-                loaded(action)
-              }
-            })
-        })
-      })
 
       const objectMessage = (msg) => {
         const hash = h(msg)
@@ -298,7 +200,7 @@ module.exports = (opts) => {
                   type: 'publish',
                   hash: event.hash
                 })
-                
+
                 update_view(event.hash)
               })
           }
@@ -311,14 +213,7 @@ module.exports = (opts) => {
         if (handler) {
           save(msg.hash, msg)
             .then(_ => {
-              const pends = waiting_load.filter(x => x.hash === msg.hash)
-              pends.map(x => x.loaded(msg))
-
-              const waiting = pending_actions.filter(a => a.hash === msg.hash)
-
-              if (waiting.length > 0) {
-                waiting.map(a => a.done(msg))
-              }
+              network_loaded(msg.hash)
 
               actions.push(msg.hash)
             })
@@ -327,12 +222,11 @@ module.exports = (opts) => {
         if (msg.object.type === 'block') {
           save(msg.hash, msg)
             .then(_ => {
-              const pends = waiting_load.filter(x => x.hash === msg.hash)
-              pends.map(x => x.loaded(msg))
+              const complete = network_loaded(msg.hash)
 
-              if (pends.length > 0) return
-
-              update_view(msg.hash)
+              if (complete) {
+                update_view(msg.hash)
+              }
             })
         }
       })
@@ -407,12 +301,12 @@ module.exports = (opts) => {
             .then(_ => chain)
         },
 
-        block: hash => {
-          return load(hash)
-            .then(block => {
-              return createBlock(view, block, load, [])
-            })
-        },
+        // block: hash => {
+        //   return load(hash)
+        //     .then(block => {
+        //       // return createBlock(view, block, load, [])
+        //     })
+        // },
 
         kill: () => {
           miner && miner.send({ type: 'kill' })
