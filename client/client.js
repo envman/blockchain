@@ -9,7 +9,7 @@ module.exports = opts => {
 
   app.use(bodyParser.json())
 
-  createGame({ port: 9000, wipe: false, miner: true, ...opts })
+  createGame({ port: 9000, wipe: true, miner: true, ...opts })
     .then(game => {
       app.get('/test', (req, res) => {
         res.send('hello')

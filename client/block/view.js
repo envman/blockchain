@@ -53,22 +53,114 @@ const createView = (existing, update) => {
     assets: {},
   }
 
-  view.add_asset = asset => {
-    const hash = h(asset)
+  const find = hash => {
+    for (let column of view.world) {
+      const x = view.world.indexOf(column)
 
-    view.assets[hash] = {
-      asset,
-      state: {},
-      hash,
-      set_goal: () => {
-        
+      for (let tile of column) {
+        const y = column.indexOf(tile)
+
+        if (tile.assets.includes(hash)) {
+          return { x, y }
+        }
       }
     }
+  }
+
+  const find_path = (from, to) => {
+    const nodes = []
+
+    const create_path_node = (x, y, previous) => {
+      if (!view.world[x] || !view.world[x][y]) {
+        return
+      }
+
+      const cost = previous && (previous.cost + 1) || 0
+      const prediction = Math.abs(to.x - x) + Math.abs(to.y - y)
+      const total = cost + prediction
+
+      const node = { cost, total, prediction, x, y, previous }
+      nodes.push(node)
+    }
+
+    const next = () => {
+      nodes.sort((a, b) => b.prediction - a.prediction)
+      const node = nodes[nodes.length - 1]
+
+      if (node.prediction === 0) {
+        return node
+      }
+
+      create_path_node(node.x, node.y + 1, node)
+      create_path_node(node.x + 1, node.y, node)
+      create_path_node(node.x, node.y - 1, node)
+      create_path_node(node.x - 1, node.y, node)
+    }
+
+    create_path_node(from.x, from.y)
+
+    while (!next()) {}
+
+    const finish = next()
+    let current = finish
+    const path = []
+
+    while (current.previous) {
+      path.unshift({ x: current.x, y: current.y })
+
+      current = current.previous
+    }
+
+    return path
+  }
+
+  view.add_asset = obj => {
+    const hash = h(obj)
+
+    const state = {}
+
+    const asset = {
+      asset: obj,
+      state,
+      hash,
+      set_goal: goal => {
+        state.goal = goal
+      }
+    }
+
+    asset.tick = () => {
+
+      if (state.goal && state.goal.type === 'move') {
+        const { to } = asset.state.goal
+        const pos = find(hash)
+
+        if (!state.path) {
+          state.path = find_path(pos, to)
+        }
+
+        if (state.path) {
+          if (state.path.length === 0) {
+            delete state.path
+          } else {
+            const next = state.path.shift()
+            const world = view.world
+
+            world[pos.x][pos.y].assets = world[pos.x][pos.y].assets.filter(x => x !== hash)
+            world[next.x][next.y].assets.push(hash)
+          }
+        }
+      }
+    }
+
+    view.assets[hash] = asset
 
     return hash
   }
 
   if (update) {
+    // const path = find_path({ x: 0, y: 0 }, { x: 10, y: 4 })
+    // console.log('path', path)
+
     const random = createRandom(update.hash)
     const chance = percent => random(100) <= percent
 
@@ -130,20 +222,6 @@ const createView = (existing, update) => {
       eden.assets.push(eve_hash)
     }
 
-    const find = hash => {
-      for (let column of view.world) {
-        const x = view.world.indexOf(column)
-
-        for (let tile of column) {
-          const y = column.indexOf(tile)
-
-          if (tile.assets.includes(hash)) {
-            return { x, y }
-          }
-        }
-      }
-    }
-
     for (let user_id of Object.keys(view.users)) {
       const user = view.users[user_id]
       const assets = user.assets
@@ -190,6 +268,8 @@ const createView = (existing, update) => {
       }
     }
   }
+
+  Object.values(view.assets).map(x => x.tick && x.tick())
 
   view.apply = block => createView(view, block)
   return view

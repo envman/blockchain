@@ -31,6 +31,7 @@ const loadImage = image => {
 let tree
 let grass
 let stone
+let character
 
 loadImage('/img/tree.png')
   .then(x => tree = x)
@@ -40,6 +41,9 @@ loadImage('/img/grass.png')
 
 loadImage('/img/stone.png')
   .then(x => stone = x)
+
+loadImage('/img/character.png')
+  .then(x => character = x)
 
 const window_size = {
   height: 800,
@@ -94,6 +98,10 @@ const draw = ({ game, user }) => {
       if (tile.resources.stone && stone) {
         ctx.drawImage(stone, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
+
+      if (tile.assets.length > 0 && character) {
+        ctx.drawImage(character, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
     }
   }
 }
@@ -145,7 +153,6 @@ $(() => {
       .then(res => res.json())
       .then(x => {
         draw(x)
-
         $('.user').text(`User: ${x.user.username}`)
         $('.turn').text(`Turn: ${x.game.turn}`)
         $('.cash').html(x.user.cash)
@@ -161,12 +168,13 @@ $(() => {
 
         $('.characters').empty()
         if (selected_character) {
+          console.log('selected_character')
           $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
 
-          const chop_button = $('<button>chop</button>')
+          const chop_button = $('<button>move</button>')
           chop_button.click(_ => {
             const action = {
-              type: 'chop',
+              type: 'move',
               character: selected_character.hash
             }
 
@@ -188,7 +196,7 @@ $(() => {
             }
 
             current_steps = [
-              selectPosition('Select resource location', x => action.pos = x),
+              // selectPosition('Select resource location', x => action.pos = x),
               selectPosition('Select target location', x => action.to = x),
               {
                 activate: (completed) => {
@@ -203,9 +211,14 @@ $(() => {
             current_action = () => {
               if (!current) {
                 current = current_steps[0]
+
+                if (!current) return
+
                 current.activate(() => {
                   current = undefined
                   current_steps.shift()
+                  selector = undefined
+                  selected_character = undefined
                 })
               }
 
@@ -252,9 +265,9 @@ $(() => {
             $('.selected-tile').append(upgrade_button)
           }
 
-          assets.map(w => {
+          tile.assets.map(w => {
             const asset = x.game.assets[w]
-            $('.selected-tile').append(`<h4>${asset.name}</h4>`)
+            $('.selected-tile').append(`<h4>${asset.asset.name}</h4>`)
           })
         } else {
           $('.selected-tile').hide()
@@ -268,7 +281,9 @@ $(() => {
 
         setTimeout(update, 500)
       })
-      .catch(() => {
+      .catch(err => {
+        console.error(err)
+
         setTimeout(update, 500)
       })
   }

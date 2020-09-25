@@ -204,28 +204,18 @@ module.exports = {
     }
   },
 
-  'chop': {
-    update_view: ({ character, pos, to }, view) => {
+  'move': {
+    update_view: ({ character, to }, view) => {
       const character_asset = view.assets[character]
 
       character_asset.set_goal({
-        type: 'chop',
-        pos,
+        type: 'move',
         to
       })
-
-      // Adding holding property will break hash
-      if (character_asset.state.holding) {
-        // need to drop
-
-        return
-      }
-
-
     },
 
-    valid: () => {
-
+    valid: (character) => {
+      return true
     }
   }
 }
