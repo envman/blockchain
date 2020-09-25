@@ -214,8 +214,8 @@ module.exports = {
       })
     },
 
-    valid: (character) => {
-      return true
+    valid: ({ character, user }, view) => {
+      return view.users[user].assets.includes(character)
     }
   }
 }

@@ -75,6 +75,14 @@ const createView = (existing, update) => {
         return
       }
 
+      if (view.world[x][y].resources.tree || view.world[x][y].resources.stone) {
+        return
+      }
+
+      if (nodes.find(n => n.x === x && n.y === y)) {
+        return
+      }
+
       const cost = previous && (previous.cost + 1) || 0
       const prediction = Math.abs(to.x - x) + Math.abs(to.y - y)
       const total = cost + prediction
@@ -84,7 +92,7 @@ const createView = (existing, update) => {
     }
 
     const next = () => {
-      nodes.sort((a, b) => b.prediction - a.prediction)
+      nodes.sort((a, b) => b.total - a.total)
       const node = nodes[nodes.length - 1]
 
       if (node.prediction === 0) {
@@ -95,11 +103,20 @@ const createView = (existing, update) => {
       create_path_node(node.x + 1, node.y, node)
       create_path_node(node.x, node.y - 1, node)
       create_path_node(node.x - 1, node.y, node)
+
+      nodes.splice(nodes.indexOf(node), 1)
     }
 
     create_path_node(from.x, from.y)
 
-    while (!next()) {}
+    let cap = 0
+    while (!next()) {
+      if (cap > 1000) {
+        throw new Error('Bad pathing')
+      }
+
+      cap = cap + 1
+    }
 
     const finish = next()
     let current = finish
@@ -129,7 +146,6 @@ const createView = (existing, update) => {
     }
 
     asset.tick = () => {
-
       if (state.goal && state.goal.type === 'move') {
         const { to } = asset.state.goal
         const pos = find(hash)
@@ -158,9 +174,6 @@ const createView = (existing, update) => {
   }
 
   if (update) {
-    // const path = find_path({ x: 0, y: 0 }, { x: 10, y: 4 })
-    // console.log('path', path)
-
     const random = createRandom(update.hash)
     const chance = percent => random(100) <= percent
 
@@ -195,7 +208,7 @@ const createView = (existing, update) => {
       const coin_base = update.actions[0]
       const first_player = view.users[coin_base.user]
 
-      const eden = view.world[0][0]
+      const eden = view.world[0][1]
 
       const adam = {
         type: 'character',
