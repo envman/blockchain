@@ -317,6 +317,11 @@ $(() => {
             const asset = x.game.assets[w]
             $('.selected-tile').append(`<h4>${asset.asset.name}</h4>`)
           })
+          Object.keys(tile.resources)
+            .map(key => {
+              const value = tile.resources[key]
+              $('.selected-tile').append(`<h4>${key}:${value}</h4>`)
+            })
         } else {
           $('.selected-tile').hide()
         }
