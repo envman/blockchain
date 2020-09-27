@@ -4,30 +4,30 @@ const action_handlers = require('./action_handlers')
 const blank_hash = '0000000000000000000000000000000000000000000000000000000000000000'
 const h = require('./hash')
 
-// const tasks = {
-//   move: () => {
+const tasks = {
+  move: () => {
 
-//   },
+  },
 
-//   pickup: () => {
+  pickup: () => {
 
-//   },
+  },
 
-//   drop: () => {
+  drop: () => {
 
-//   }
-// }
+  }
+}
 
-// const jobs = {
-//   chop: () => {
-//     return [
-//       move(),
-//       pickup(),
-//       move(),
-//       drop()
-//     ]
-//   }
-// }
+const jobs = {
+  chop: ({ to, pos }) => {
+    return [
+      move(pos),
+      pickup(),
+      move(to),
+      drop()
+    ]
+  }
+}
 
 const createWorld = _ => {
   const random = createRandom(blank_hash)
@@ -206,6 +206,16 @@ const createView = (existing, update) => {
           state.step(pos)
         }
       }
+
+      // if (state.goal) {
+      //   if (!state.job) {
+      //     state.job = jobs[state.goal.type](state.goal)
+      //   }
+
+      //   if (!state.task) {
+          
+      //   }
+      // }
 
       if (state.goal && state.goal.type === 'chop') {
         const { to, pos } = asset.state.goal

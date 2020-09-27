@@ -231,8 +231,13 @@ $(() => {
         if (selected_character) {
           $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
 
-          const move_button = $('<button>move</button>')
-          move_button.click(_ => {
+          const button = (name, click) => {
+            const button = $(`<button>${name}</button>`)
+            button.click(click)
+            $('.characters').append(button)
+          }
+
+          button('move', _ => {
             const action = {
               type: 'move',
               character: selected_character.hash
@@ -243,10 +248,8 @@ $(() => {
               publish(action)
             ])
           })
-          $('.characters').append(move_button)
 
-          const chop_button = $('<button>chop</button>')
-          chop_button.click(_ => {
+          button('chop', _ => {
             const action = {
               type: 'job',
               job: 'chop',
@@ -259,7 +262,19 @@ $(() => {
               publish(action)
             ])
           })
-          $('.characters').append(chop_button)
+
+          button('build-tent', _ => {
+            const action = {
+              type: 'build',
+              building: 'tent',
+              character: selected_character.hash
+            }
+
+            action_builder([
+              selectPosition('Select target location', x => action.pos = x)
+            ])
+            publish(action)
+          })
         } else {
           characters.map(({ hash, character }) => {
             const character_button = $(`<div><button>${character.name}</button></div>`)
