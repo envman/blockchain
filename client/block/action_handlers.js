@@ -220,13 +220,14 @@ module.exports = {
   },
 
   'job': {
-    update_view: ({ character, job, pos, to }, view) => {
+    update_view: ({ character, job, pos, to, work_location }, view) => {
       const character_asset = view.assets[character]
 
       character_asset.set_goal({
         type: job,
         pos,
         to,
+        work_location,
       })
     },
 

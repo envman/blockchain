@@ -67,6 +67,32 @@ const createView = (existing, update) => {
     }
   }
 
+  const find_tile = (pos, limit, func, skip_center) => {
+    let potential = []
+
+    for (let x = pos.x - limit; x <= pos.x + limit; x++) {
+      for (let y = pos.y - limit; y <= pos.y + limit; y++) {
+        let tile = view.world[x][y]
+
+        if (skip_center && x === pos.x && y === pos.y) {
+          continue
+        }
+
+        if (tile && func(tile)) {
+          const distance = Math.abs(pos.x - x) + Math.abs(pos.y - y)
+          potential.push({ x, y, distance })
+        }
+      }
+    }
+
+    if (potential.length === 0) {
+      return
+    }
+
+    potential.sort((a, b) => b.distance - a.distance)
+    return potential[potential.length - 1]
+  }
+
   const pos_match = (a, b) => {
     return a.x === b.x && a.y === b.y
   }
@@ -124,7 +150,7 @@ const createView = (existing, update) => {
 
     const finish = next()
     let current = finish
-    const path = []
+    const path = [finish]
 
     while (current.previous) {
       path.unshift({ x: current.x, y: current.y })
@@ -189,11 +215,23 @@ const createView = (existing, update) => {
       }
     },
 
-    build: (building, building_location) => {
+    build: (building, building_location, free) => {
       return (current, view) => {
         const tile = view.world[building_location.x][building_location.y]
         tile.building = building
-        tile.resources.wood -= 5
+
+        if (!free) {
+          tile.resources.wood -= 5
+        }
+
+        return true
+      }
+    },
+
+    plant: (pos) => {
+      return (current, view) => {
+        const tile = view.world[pos.x][pos.y]
+        tile.planted = 1
         return true
       }
     }
@@ -211,6 +249,7 @@ const createView = (existing, update) => {
         ]
       }
     },
+
     build: ({ building_location, resource_location, building }, view) => {
 
       const building_tile = view.world[building_location.x][building_location.y]
@@ -233,6 +272,53 @@ const createView = (existing, update) => {
           tasks.pickup('wood', 1),
           tasks.move(building_location),
           tasks.drop('wood', 1)
+        ]
+      }
+    },
+
+    work: ({ work_location }, view) => {
+      const grown = find_tile(work_location, 1, t => t.resources.carrots, true)
+      if (grown) {
+        return {
+          set: 'harvesting',
+          tasks: [
+            tasks.move(grown),
+            tasks.pickup('carrots', 1),
+            tasks.move(work_location),
+            tasks.drop('carrots', 1)
+          ]
+        }
+      }
+
+      const empty = find_tile(work_location, 1, t => t.building === 'field' && !t.planted)
+      if (empty) {
+        return {
+          set: 'planting',
+          tasks: [
+            tasks.move(empty),
+            tasks.plant(empty),
+            tasks.move(work_location),
+          ]
+        }
+      }
+
+      const land = find_tile(work_location, 1, t => !t.building && Object.keys(t.resources).length < 1)
+
+      if (land) {
+        return {
+          set: 'building',
+          tasks: [
+            tasks.move(land),
+            tasks.build('field', land, true),
+            tasks.move(work_location),
+          ]
+        }
+      }
+
+      return {
+        set: 'waiting',
+        tasks: [
+
         ]
       }
     }
@@ -425,6 +511,17 @@ const createView = (existing, update) => {
             user.assets.push(baby_hash)
             view.world[current.location.x][current.location.y].assets.push(baby_hash)
           }
+        }
+      }
+    }
+
+    for (let column of view.world) {
+      for (let tile of column) {
+        if (tile.planted === 1 && chance(5)) {
+          tile.planted = 2
+        } else if (tile.planted === 2 && chance(5)) {
+          tile.resources.carrots = 1
+          delete tile.planted
         }
       }
     }

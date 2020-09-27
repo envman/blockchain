@@ -35,6 +35,11 @@ let character
 let log
 let logs
 let tent
+let farm
+let field
+let field_growing
+let field_planted
+let carrot
 
 loadImage('/img/tree.png')
   .then(x => tree = x)
@@ -56,6 +61,21 @@ loadImage('/img/log.png')
 
 loadImage('/img/tent.png')
   .then(x => tent = x)
+
+loadImage('/img/farm.png')
+  .then(x => farm = x)
+
+loadImage('/img/field.png')
+  .then(x => field = x)
+
+loadImage('/img/field_growing.png')
+  .then(x => field_growing = x)
+
+loadImage('/img/field_planted.png')
+  .then(x => field_planted = x)
+
+loadImage('/img/carrot.png')
+  .then(x => carrot = x)
 
 const window_size = {
   height: 800,
@@ -101,12 +121,30 @@ const draw = ({ game, user }) => {
         ctx.drawImage(tent, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
+      if (tile.building && tile.building === 'farm') {
+        ctx.drawImage(farm, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
+
+      if (tile.building && tile.building === 'field') {
+        if (tile.planted === 1) {
+          ctx.drawImage(field_planted, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+        } else if (tile.planted === 2) {
+          ctx.drawImage(field_growing, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+        } else {
+          ctx.drawImage(field, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+        }
+      }
+
       if (tile.resources.tree && tree) {
         ctx.drawImage(tree, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
       if (tile.resources.stone && stone) {
         ctx.drawImage(stone, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
+
+      if (tile.resources.carrots && carrot && tile.building !== 'farm') {
+        ctx.drawImage(carrot, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
       if (tile.resources.wood && log && logs) {
@@ -265,10 +303,37 @@ $(() => {
             ])
           })
 
+          button('work', _ => {
+            const action = {
+              type: 'job',
+              job: 'work',
+              character: selected_character.hash
+            }
+
+            action_builder([
+              selectPosition('Select work location', x => action.work_location = x),
+              publish(action)
+            ])
+          })
+
           button('build-tent', _ => {
             const action = {
               type: 'build',
               building: 'tent',
+              character: selected_character.hash
+            }
+
+            action_builder([
+              selectPosition('Select resource location', x => action.resource_location = x),
+              selectPosition('Select building location', x => action.building_location = x),
+              publish(action)
+            ])
+          })
+
+          button('build-farm', _ => {
+            const action = {
+              type: 'build',
+              building: 'farm',
               character: selected_character.hash
             }
 

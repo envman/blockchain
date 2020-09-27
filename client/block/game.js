@@ -11,7 +11,7 @@ const wallet = require('./wallet')
 const create_loader = require('./loader')
 const default_meta = require('./default_meta')
 
-const difficulty = 3
+const difficulty = 2
 
 module.exports = (opts) => {
   const save_dir = opts.data_root || path.join(__dirname, '..', '..', 'data')
