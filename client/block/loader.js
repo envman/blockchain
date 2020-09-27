@@ -58,12 +58,12 @@ module.exports = (network, load) => {
       })
   }
 
-  const network_loaded = hash => {
-    const pends = waiting_load.filter(x => x.hash === hash)
+  const network_loaded = msg => {
+    const pends = waiting_load.filter(x => x.hash === msg.hash)
     pends.map(x => x.loaded(msg))
 
     if (pends.length > 0) {
-      waiting_load = waiting_load.filter(x => x.hash !== hash)
+      waiting_load = waiting_load.filter(x => x.hash !== msg.hash)
       return false
     }
 
