@@ -34,6 +34,7 @@ let stone
 let character
 let log
 let logs
+let tent
 
 loadImage('/img/tree.png')
   .then(x => tree = x)
@@ -52,6 +53,9 @@ loadImage('/img/logs.png')
 
 loadImage('/img/log.png')
   .then(x => log = x)
+
+loadImage('/img/tent.png')
+  .then(x => tent = x)
 
 const window_size = {
   height: 800,
@@ -93,10 +97,8 @@ const draw = ({ game, user }) => {
 
       ctx.fillText(`${tile.assets.length}`, (x * square.width) + 2, (y * square.height) + 45)
 
-      if (tile.building) {
-        ctx.font = '24px serif';
-        ctx.fillStyle = "#000000"
-        ctx.fillText(tile.building.code, (x * square.width) + 20, (y * square.height) + 25)
+      if (tile.building && tile.building === 'tent') {
+        ctx.drawImage(tent, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
       if (tile.resources.tree && tree) {
@@ -271,9 +273,10 @@ $(() => {
             }
 
             action_builder([
-              selectPosition('Select target location', x => action.pos = x)
+              selectPosition('Select resource location', x => action.resource_location = x),
+              selectPosition('Select building location', x => action.building_location = x),
+              publish(action)
             ])
-            publish(action)
           })
         } else {
           characters.map(({ hash, character }) => {

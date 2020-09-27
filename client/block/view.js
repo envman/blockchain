@@ -187,33 +187,80 @@ const createView = (existing, update) => {
 
         return true
       }
+    },
+
+    build: (building, building_location) => {
+      return (current, view) => {
+        const tile = view.world[building_location.x][building_location.y]
+        tile.building = building
+        tile.resources.wood -= 5
+        return true
+      }
     }
   }
 
   const jobs = {
     chop: ({ to, pos }) => {
-      return [
-        tasks.move(pos),
-        tasks.pickup('tree', 1, 'wood'),
-        tasks.move(to),
-        tasks.drop('wood', 1)
-      ]
+      return {
+        set: 'gathering wood',
+        tasks: [
+          tasks.move(pos),
+          tasks.pickup('tree', 1, 'wood'),
+          tasks.move(to),
+          tasks.drop('wood', 1)
+        ]
+      }
+    },
+    build: ({ building_location, resource_location, building }, view) => {
+
+      const building_tile = view.world[building_location.x][building_location.y]
+
+      if (building_tile.building) {
+        return { complete: true }
+      }
+
+      if (building_tile.resources.wood >= 5) {
+        return {
+          set: 'building',
+          tasks: [tasks.build(building, building_location)]
+        }
+      }
+
+      return {
+        set: 'gathering resources',
+        tasks: [
+          tasks.move(resource_location),
+          tasks.pickup('wood', 1),
+          tasks.move(building_location),
+          tasks.drop('wood', 1)
+        ]
+      }
     }
   }
 
-  const create_job = (goal) => {
-    let current = -1
-
-    const tasks = jobs[goal.type](goal)
+  const create_job = (goal, view) => {
+    let current_index = -1
+    let current_set = ''
 
     return () => {
-      current++
+      const tasks = jobs[goal.type](goal, view)
 
-      if (current === tasks.length) {
-        current = 0
+      if (tasks.complete) {
+        return
       }
 
-      return tasks[current]
+      if (tasks.set !== current_set) {
+        current_index = -1
+        current_set = tasks.set
+      }
+
+      current_index++
+
+      if (current_index === tasks.tasks.length) {
+        current_index = 0
+      }
+
+      return tasks.tasks[current_index]
     }
   }
 
@@ -229,6 +276,7 @@ const createView = (existing, update) => {
       state,
       hash,
       set_goal: goal => {
+        delete state.job
         state.goal = goal
       }
     }
@@ -250,11 +298,16 @@ const createView = (existing, update) => {
 
       if (state.goal) {
         if (!state.job) {
-          state.job = create_job(state.goal)
+          state.job = create_job(state.goal, view)
         }
 
         if (!state.task) {
           state.task = state.job()
+          if (!state.task) {
+            delete state.goal
+            delete state.job
+            return
+          }
         }
 
         if (state.task(pos, view, asset)) {

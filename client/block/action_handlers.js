@@ -52,7 +52,7 @@ module.exports = {
 
     valid: (a, view) => {
       const user_details = view.users[a.user]
-      
+
       if (!user_details) {
         return false
       }
@@ -167,9 +167,9 @@ module.exports = {
         to_user.cash = to_user.cash + Number(input.amount)
         return
       }
-      
+
       const from_user = view.users[user]
-      
+
       if (input.type === 'cash') {
         from_user.cash = from_user.cash - Number(input.amount)
         to_user.cash = to_user.cash + Number(input.amount)
@@ -236,18 +236,23 @@ module.exports = {
   },
 
   'build': {
-    update_view: ({ building, character, pos }, view) => {
+    update_view: ({ building, character, resource_location, building_location }, view) => {
       const character_asset = view.assets[character]
 
       character_asset.set_goal({
         type: 'build',
-        pos,
+        resource_location,
+        building_location,
         building
       })
     },
 
-    valid: ({ building, character, pos }, view) => {
-      const tile = view.world[pos.x][pos.y]
+    valid: ({ building, character, building_location, user }, view) => {
+      const tile = view.world[building_location.x][building_location.y]
+
+      if (!view.users[user].assets.includes(character)) {
+        return false
+      }
 
       if (tile.building) {
         return false
