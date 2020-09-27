@@ -2,7 +2,7 @@ const default_meta = require('./default_meta')
 
 module.exports = (network, load) => {
 
-  const waiting_load = []
+  let waiting_load = []
 
   const full_load = hash => {
     return load(hash)
