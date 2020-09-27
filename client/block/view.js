@@ -261,45 +261,6 @@ const createView = (existing, update) => {
           delete state.task
         }
       }
-
-      // if (state.goal && state.goal.type === 'chop') {
-      //   const { to, pos } = asset.state.goal
-      //   const current = find(hash)
-
-      //   if (!state.path) {
-      //     // If I not has resource
-      //     if (!state.resources || !state.resources.wood) {
-      //       state.path = find_path(current, pos)
-      //     }
-
-      //     // If i has resource
-      //     if (state.resources && state.resources.wood) {
-      //       state.path = find_path(current, to)
-      //     }
-
-      //     // if got resource && not what I want
-      //   }
-
-      //   if (state.step(current)) {
-      //     if (pos_match(current, pos)) {
-      //       const resource_tile = view.world[pos.x][pos.y]
-      //       const amount = Math.min(resource_tile.resources.trees, 1)
-      //       resource_tile.resources.trees -= amount
-      //       state.resources = state.resources || {}
-      //       state.resources.wood = state.resources.wood || 0
-      //       state.resources.wood = state.resources.wood + 1
-      //     }
-
-      //     if (pos_match(current, to)) {
-      //       const drop_tile = view.world[to.x][to.y]
-
-      //       const amount = state.resources.wood
-      //       state.resources.wood = state.resources.wood - amount
-      //       drop_tile.resources.wood = drop_tile.resources.wood || 0
-      //       drop_tile.resources.wood = drop_tile.resources.wood + amount
-      //     }
-      //   }
-      // }
     }
 
     view.assets[hash] = asset
