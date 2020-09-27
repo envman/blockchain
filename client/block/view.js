@@ -4,6 +4,31 @@ const action_handlers = require('./action_handlers')
 const blank_hash = '0000000000000000000000000000000000000000000000000000000000000000'
 const h = require('./hash')
 
+// const tasks = {
+//   move: () => {
+
+//   },
+
+//   pickup: () => {
+
+//   },
+
+//   drop: () => {
+
+//   }
+// }
+
+// const jobs = {
+//   chop: () => {
+//     return [
+//       move(),
+//       pickup(),
+//       move(),
+//       drop()
+//     ]
+//   }
+// }
+
 const createWorld = _ => {
   const random = createRandom(blank_hash)
   const chance = percent => random(100) <= percent
@@ -67,7 +92,13 @@ const createView = (existing, update) => {
     }
   }
 
+  const pos_match = (a, b) => {
+    return a.x === b.x && a.y === b.y
+  }
+
   const find_path = (from, to) => {
+    console.log(`Find path ${from.x}:${from.y} -> ${to.x}:${to.y}`)
+
     const nodes = []
 
     const create_path_node = (x, y, previous) => {
@@ -75,9 +106,9 @@ const createView = (existing, update) => {
         return
       }
 
-      if (view.world[x][y].resources.tree || view.world[x][y].resources.stone) {
-        return
-      }
+      // if (view.world[x][y].resources.tree || view.world[x][y].resources.stone) {
+      //   return
+      // }
 
       if (nodes.find(n => n.x === x && n.y === y)) {
         return
@@ -145,6 +176,23 @@ const createView = (existing, update) => {
       }
     }
 
+    state.step = (pos) => {
+      if (state.path.length === 0) {
+        console.log('step done')
+        delete state.path
+        // delete state.goal
+
+        return true
+      } else {
+        const next = state.path.shift()
+        console.log('next step', `${next.x}:${next.y}`)
+        const world = view.world
+
+        world[pos.x][pos.y].assets = world[pos.x][pos.y].assets.filter(x => x !== hash)
+        world[next.x][next.y].assets.push(hash)
+      }
+    }
+
     asset.tick = () => {
       if (state.goal && state.goal.type === 'move') {
         const { to } = asset.state.goal
@@ -155,14 +203,45 @@ const createView = (existing, update) => {
         }
 
         if (state.path) {
-          if (state.path.length === 0) {
-            delete state.path
-          } else {
-            const next = state.path.shift()
-            const world = view.world
+          state.step(pos)
+        }
+      }
 
-            world[pos.x][pos.y].assets = world[pos.x][pos.y].assets.filter(x => x !== hash)
-            world[next.x][next.y].assets.push(hash)
+      if (state.goal && state.goal.type === 'chop') {
+        const { to, pos } = asset.state.goal
+        const current = find(hash)
+
+        if (!state.path) {
+          // If I not has resource
+          if (!state.resources || !state.resources.wood) {
+            state.path = find_path(current, pos)
+          }
+
+          // If i has resource
+          if (state.resources && state.resources.wood) {
+            state.path = find_path(current, to)
+          }
+
+          // if got resource && not what I want
+        }
+
+        if (state.step(current)) {
+          if (pos_match(current, pos)) {
+            const resource_tile = view.world[pos.x][pos.y]
+            const amount = Math.min(resource_tile.resources.trees, 1)
+            resource_tile.resources.trees -= amount
+            state.resources = state.resources || {}
+            state.resources.wood = state.resources.wood || 0
+            state.resources.wood = state.resources.wood + 1
+          }
+
+          if (pos_match(current, to)) {
+            const drop_tile = view.world[to.x][to.y]
+            
+            const amount = state.resources.wood
+            state.resources.wood = state.resources.wood - amount
+            drop_tile.resources.wood = drop_tile.resources.wood || 0
+            drop_tile.resources.wood = drop_tile.resources.wood + amount
           }
         }
       }
@@ -229,7 +308,7 @@ const createView = (existing, update) => {
         mum: blank_hash,
         dad: blank_hash,
       }
-      
+
       const eve_hash = view.add_asset(eve)
       first_player.assets.push(eve_hash)
       eden.assets.push(eve_hash)
@@ -260,8 +339,8 @@ const createView = (existing, update) => {
 
         const partner = men.find(x => x.location.x === current.location.x && x.location.y === current.location.y)
         men.splice(men.indexOf(partner), 1)
-        
-        if (partner && chance(1)) {
+
+        if (partner && chance(3)) {
           const baby = {
             type: 'character',
             sex: chance(50) ? 'F' : 'M',
@@ -270,7 +349,7 @@ const createView = (existing, update) => {
           }
 
           baby.name = names[baby.sex][random(names[baby.sex].length)]
-    
+
           const baby_hash = h(baby)
           if (!view.assets[baby_hash]) { // No duplicate babys!
             view.add_asset(baby)

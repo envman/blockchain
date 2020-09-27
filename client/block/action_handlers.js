@@ -217,5 +217,21 @@ module.exports = {
     valid: ({ character, user }, view) => {
       return view.users[user].assets.includes(character)
     }
-  }
+  },
+
+  'job': {
+    update_view: ({ character, job, pos, to }, view) => {
+      const character_asset = view.assets[character]
+
+      character_asset.set_goal({
+        type: job,
+        pos,
+        to,
+      })
+    },
+
+    valid: ({ character, user }, view) => {
+      return view.users[user].assets.includes(character)
+    }
+  },
 }

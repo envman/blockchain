@@ -32,6 +32,8 @@ let tree
 let grass
 let stone
 let character
+let log
+let logs
 
 loadImage('/img/tree.png')
   .then(x => tree = x)
@@ -44,6 +46,12 @@ loadImage('/img/stone.png')
 
 loadImage('/img/character.png')
   .then(x => character = x)
+
+loadImage('/img/logs.png')
+  .then(x => logs = x)
+
+loadImage('/img/log.png')
+  .then(x => log = x)
 
 const window_size = {
   height: 800,
@@ -99,6 +107,12 @@ const draw = ({ game, user }) => {
         ctx.drawImage(stone, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
+      if (tile.resources.wood && log && logs) {
+        const image = tile.resources.wood > 1 ? logs : log
+
+        ctx.drawImage(image, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
+
       if (tile.assets.length > 0 && character) {
         ctx.drawImage(character, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
@@ -127,6 +141,22 @@ const publish_action = action => {
   })
 }
 
+const selectPosition = (name, done) => {
+  return {
+    name,
+    activate: (completed) => {
+      console.log(`${name} activated`)
+
+      selector = (...p) => {
+        console.log(`${name} selected ${JSON.stringify(p)}`)
+
+        done(...p)
+        completed()
+      }
+    },
+  }
+}
+
 canvas.addEventListener('click', e => {
   const x = e.offsetX
   const y = e.offsetY
@@ -143,9 +173,40 @@ canvas.addEventListener('click', e => {
   }
 })
 
-let current_steps = []
+const publish = action => {
+  return {
+    activate: (completed) => {
+      publish_action(action)
+        .then(_ => completed())
+    }
+  }
+}
 
+let current_steps = []
 let current_action
+
+const action_builder = (steps) => {
+  current_steps = steps
+
+  let current
+
+  current_action = () => {
+    if (!current) {
+      current = current_steps[0]
+
+      if (!current) return
+
+      current.activate(() => {
+        current = undefined
+        current_steps.shift()
+        selector = undefined
+        selected_character = undefined
+      })
+    }
+
+    return current
+  }
+}
 
 $(() => {
   const update = () => {
@@ -168,64 +229,36 @@ $(() => {
 
         $('.characters').empty()
         if (selected_character) {
-          console.log('selected_character')
           $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
 
-          const chop_button = $('<button>move</button>')
-          chop_button.click(_ => {
+          const move_button = $('<button>move</button>')
+          move_button.click(_ => {
             const action = {
               type: 'move',
               character: selected_character.hash
             }
 
-            const selectPosition = (name, done) => {
-
-              return {
-                name,
-                activate: (completed) => {
-                  console.log(`${name} activated`)
-
-                  selector = (...p) => {
-                    console.log(`${name} selected ${JSON.stringify(p)}`)
-
-                    done(...p)
-                    completed()
-                  }
-                },
-              }
-            }
-
-            current_steps = [
-              // selectPosition('Select resource location', x => action.pos = x),
+            action_builder([
               selectPosition('Select target location', x => action.to = x),
-              {
-                activate: (completed) => {
-                  publish_action(action)
-                    .then(_ => completed())
-                }
-              }
-            ]
-
-            let current
-
-            current_action = () => {
-              if (!current) {
-                current = current_steps[0]
-
-                if (!current) return
-
-                current.activate(() => {
-                  current = undefined
-                  current_steps.shift()
-                  selector = undefined
-                  selected_character = undefined
-                })
-              }
-
-              return current
-            }
+              publish(action)
+            ])
           })
+          $('.characters').append(move_button)
 
+          const chop_button = $('<button>chop</button>')
+          chop_button.click(_ => {
+            const action = {
+              type: 'job',
+              job: 'chop',
+              character: selected_character.hash
+            }
+
+            action_builder([
+              selectPosition('Select resource location', x => action.pos = x),
+              selectPosition('Select target location', x => action.to = x),
+              publish(action)
+            ])
+          })
           $('.characters').append(chop_button)
         } else {
           characters.map(({ hash, character }) => {
