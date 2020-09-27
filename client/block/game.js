@@ -213,7 +213,7 @@ module.exports = (opts) => {
         if (handler) {
           save(msg.hash, msg)
             .then(_ => {
-              network_loaded(msg.hash)
+              network_loaded(msg)
 
               actions.push(msg.hash)
             })
@@ -222,7 +222,7 @@ module.exports = (opts) => {
         if (msg.object.type === 'block') {
           save(msg.hash, msg)
             .then(_ => {
-              const complete = network_loaded(msg.hash)
+              const complete = network_loaded(msg)
 
               if (complete) {
                 update_view(msg.hash)
