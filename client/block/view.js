@@ -4,31 +4,6 @@ const action_handlers = require('./action_handlers')
 const blank_hash = '0000000000000000000000000000000000000000000000000000000000000000'
 const h = require('./hash')
 
-const tasks = {
-  move: () => {
-
-  },
-
-  pickup: () => {
-
-  },
-
-  drop: () => {
-
-  }
-}
-
-const jobs = {
-  chop: ({ to, pos }) => {
-    return [
-      move(pos),
-      pickup(),
-      move(to),
-      drop()
-    ]
-  }
-}
-
 const createWorld = _ => {
   const random = createRandom(blank_hash)
   const chance = percent => random(100) <= percent
@@ -97,8 +72,6 @@ const createView = (existing, update) => {
   }
 
   const find_path = (from, to) => {
-    console.log(`Find path ${from.x}:${from.y} -> ${to.x}:${to.y}`)
-
     const nodes = []
 
     const create_path_node = (x, y, previous) => {
@@ -162,10 +135,94 @@ const createView = (existing, update) => {
     return path
   }
 
+  const tasks = {
+    move: (pos) => {
+      let path
+
+      return (current, view, { hash }) => {
+        if (!path) {
+          path = find_path(current, pos)
+        }
+
+        const next = path.shift()
+        const world = view.world
+
+        world[current.x][current.y].assets = world[current.x][current.y].assets.filter(x => x !== hash)
+        world[next.x][next.y].assets.push(hash)
+
+        if (path.length === 0) {
+          path = undefined
+
+          return true
+        }
+      }
+    },
+
+    pickup: (input, count, output) => {
+      output = output || input
+
+      return (current, view, { state }) => {
+        const { resources } = view.world[current.x][current.y]
+
+        if (!resources[input]) return
+
+        resources[input] -= count
+        state.resources[output] = state.resources[output] || 0
+        state.resources[output] += count
+
+        return true
+      }
+    },
+
+    drop: (input, count, output) => {
+      output = output || input
+
+      return (current, view, { state }) => {
+        const { resources } = view.world[current.x][current.y]
+
+        state.resources[output] -= count
+
+        resources[input] = resources[input] || 0
+        resources[input] += count
+
+        return true
+      }
+    }
+  }
+
+  const jobs = {
+    chop: ({ to, pos }) => {
+      return [
+        tasks.move(pos),
+        tasks.pickup('tree', 1, 'wood'),
+        tasks.move(to),
+        tasks.drop('wood', 1)
+      ]
+    }
+  }
+
+  const create_job = (goal) => {
+    let current = -1
+
+    const tasks = jobs[goal.type](goal)
+
+    return () => {
+      current++
+
+      if (current === tasks.length) {
+        current = 0
+      }
+
+      return tasks[current]
+    }
+  }
+
   view.add_asset = obj => {
     const hash = h(obj)
 
-    const state = {}
+    const state = {
+      resources: {}
+    }
 
     const asset = {
       asset: obj,
@@ -176,27 +233,11 @@ const createView = (existing, update) => {
       }
     }
 
-    state.step = (pos) => {
-      if (state.path.length === 0) {
-        console.log('step done')
-        delete state.path
-        // delete state.goal
-
-        return true
-      } else {
-        const next = state.path.shift()
-        console.log('next step', `${next.x}:${next.y}`)
-        const world = view.world
-
-        world[pos.x][pos.y].assets = world[pos.x][pos.y].assets.filter(x => x !== hash)
-        world[next.x][next.y].assets.push(hash)
-      }
-    }
-
     asset.tick = () => {
+      const pos = find(hash)
+
       if (state.goal && state.goal.type === 'move') {
         const { to } = asset.state.goal
-        const pos = find(hash)
 
         if (!state.path) {
           state.path = find_path(pos, to)
@@ -207,54 +248,58 @@ const createView = (existing, update) => {
         }
       }
 
-      // if (state.goal) {
-      //   if (!state.job) {
-      //     state.job = jobs[state.goal.type](state.goal)
-      //   }
-
-      //   if (!state.task) {
-          
-      //   }
-      // }
-
-      if (state.goal && state.goal.type === 'chop') {
-        const { to, pos } = asset.state.goal
-        const current = find(hash)
-
-        if (!state.path) {
-          // If I not has resource
-          if (!state.resources || !state.resources.wood) {
-            state.path = find_path(current, pos)
-          }
-
-          // If i has resource
-          if (state.resources && state.resources.wood) {
-            state.path = find_path(current, to)
-          }
-
-          // if got resource && not what I want
+      if (state.goal) {
+        if (!state.job) {
+          state.job = create_job(state.goal)
         }
 
-        if (state.step(current)) {
-          if (pos_match(current, pos)) {
-            const resource_tile = view.world[pos.x][pos.y]
-            const amount = Math.min(resource_tile.resources.trees, 1)
-            resource_tile.resources.trees -= amount
-            state.resources = state.resources || {}
-            state.resources.wood = state.resources.wood || 0
-            state.resources.wood = state.resources.wood + 1
-          }
+        if (!state.task) {
+          state.task = state.job()
+        }
 
-          if (pos_match(current, to)) {
-            const drop_tile = view.world[to.x][to.y]
-            
-            const amount = state.resources.wood
-            state.resources.wood = state.resources.wood - amount
-            drop_tile.resources.wood = drop_tile.resources.wood || 0
-            drop_tile.resources.wood = drop_tile.resources.wood + amount
-          }
+        if (state.task(pos, view, asset)) {
+          delete state.task
         }
       }
+
+      // if (state.goal && state.goal.type === 'chop') {
+      //   const { to, pos } = asset.state.goal
+      //   const current = find(hash)
+
+      //   if (!state.path) {
+      //     // If I not has resource
+      //     if (!state.resources || !state.resources.wood) {
+      //       state.path = find_path(current, pos)
+      //     }
+
+      //     // If i has resource
+      //     if (state.resources && state.resources.wood) {
+      //       state.path = find_path(current, to)
+      //     }
+
+      //     // if got resource && not what I want
+      //   }
+
+      //   if (state.step(current)) {
+      //     if (pos_match(current, pos)) {
+      //       const resource_tile = view.world[pos.x][pos.y]
+      //       const amount = Math.min(resource_tile.resources.trees, 1)
+      //       resource_tile.resources.trees -= amount
+      //       state.resources = state.resources || {}
+      //       state.resources.wood = state.resources.wood || 0
+      //       state.resources.wood = state.resources.wood + 1
+      //     }
+
+      //     if (pos_match(current, to)) {
+      //       const drop_tile = view.world[to.x][to.y]
+
+      //       const amount = state.resources.wood
+      //       state.resources.wood = state.resources.wood - amount
+      //       drop_tile.resources.wood = drop_tile.resources.wood || 0
+      //       drop_tile.resources.wood = drop_tile.resources.wood + amount
+      //     }
+      //   }
+      // }
     }
 
     view.assets[hash] = asset
