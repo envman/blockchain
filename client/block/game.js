@@ -231,6 +231,10 @@ module.exports = (opts) => {
         }
       })
 
+      if (meta.head !== default_meta.head) {
+        update_view(meta.head)
+      }
+
       return {
         view: () => {
           const network_view = network.view()

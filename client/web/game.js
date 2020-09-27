@@ -31,6 +31,9 @@ const loadImage = image => {
 let tree
 let grass
 let stone
+let character
+let log
+let logs
 
 loadImage('/img/tree.png')
   .then(x => tree = x)
@@ -40,6 +43,15 @@ loadImage('/img/grass.png')
 
 loadImage('/img/stone.png')
   .then(x => stone = x)
+
+loadImage('/img/character.png')
+  .then(x => character = x)
+
+loadImage('/img/logs.png')
+  .then(x => logs = x)
+
+loadImage('/img/log.png')
+  .then(x => log = x)
 
 const window_size = {
   height: 800,
@@ -94,6 +106,16 @@ const draw = ({ game, user }) => {
       if (tile.resources.stone && stone) {
         ctx.drawImage(stone, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
+
+      if (tile.resources.wood && log && logs) {
+        const image = tile.resources.wood > 1 ? logs : log
+
+        ctx.drawImage(image, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
+
+      if (tile.assets.length > 0 && character) {
+        ctx.drawImage(character, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
     }
   }
 }
@@ -119,6 +141,22 @@ const publish_action = action => {
   })
 }
 
+const selectPosition = (name, done) => {
+  return {
+    name,
+    activate: (completed) => {
+      console.log(`${name} activated`)
+
+      selector = (...p) => {
+        console.log(`${name} selected ${JSON.stringify(p)}`)
+
+        done(...p)
+        completed()
+      }
+    },
+  }
+}
+
 canvas.addEventListener('click', e => {
   const x = e.offsetX
   const y = e.offsetY
@@ -135,9 +173,40 @@ canvas.addEventListener('click', e => {
   }
 })
 
-let current_steps = []
+const publish = action => {
+  return {
+    activate: (completed) => {
+      publish_action(action)
+        .then(_ => completed())
+    }
+  }
+}
 
+let current_steps = []
 let current_action
+
+const action_builder = (steps) => {
+  current_steps = steps
+
+  let current
+
+  current_action = () => {
+    if (!current) {
+      current = current_steps[0]
+
+      if (!current) return
+
+      current.activate(() => {
+        current = undefined
+        current_steps.shift()
+        selector = undefined
+        selected_character = undefined
+      })
+    }
+
+    return current
+  }
+}
 
 $(() => {
   const update = () => {
@@ -145,7 +214,6 @@ $(() => {
       .then(res => res.json())
       .then(x => {
         draw(x)
-
         $('.user').text(`User: ${x.user.username}`)
         $('.turn').text(`Turn: ${x.game.turn}`)
         $('.cash').html(x.user.cash)
@@ -163,57 +231,50 @@ $(() => {
         if (selected_character) {
           $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
 
-          const chop_button = $('<button>chop</button>')
-          chop_button.click(_ => {
+          const button = (name, click) => {
+            const button = $(`<button>${name}</button>`)
+            button.click(click)
+            $('.characters').append(button)
+          }
+
+          button('move', _ => {
             const action = {
-              type: 'chop',
+              type: 'move',
               character: selected_character.hash
             }
 
-            const selectPosition = (name, done) => {
-
-              return {
-                name,
-                activate: (completed) => {
-                  console.log(`${name} activated`)
-
-                  selector = (...p) => {
-                    console.log(`${name} selected ${JSON.stringify(p)}`)
-
-                    done(...p)
-                    completed()
-                  }
-                },
-              }
-            }
-
-            current_steps = [
-              selectPosition('Select resource location', x => action.pos = x),
+            action_builder([
               selectPosition('Select target location', x => action.to = x),
-              {
-                activate: (completed) => {
-                  publish_action(action)
-                    .then(_ => completed())
-                }
-              }
-            ]
-
-            let current
-
-            current_action = () => {
-              if (!current) {
-                current = current_steps[0]
-                current.activate(() => {
-                  current = undefined
-                  current_steps.shift()
-                })
-              }
-
-              return current
-            }
+              publish(action)
+            ])
           })
 
-          $('.characters').append(chop_button)
+          button('chop', _ => {
+            const action = {
+              type: 'job',
+              job: 'chop',
+              character: selected_character.hash
+            }
+
+            action_builder([
+              selectPosition('Select resource location', x => action.pos = x),
+              selectPosition('Select target location', x => action.to = x),
+              publish(action)
+            ])
+          })
+
+          button('build-tent', _ => {
+            const action = {
+              type: 'build',
+              building: 'tent',
+              character: selected_character.hash
+            }
+
+            action_builder([
+              selectPosition('Select target location', x => action.pos = x)
+            ])
+            publish(action)
+          })
         } else {
           characters.map(({ hash, character }) => {
             const character_button = $(`<div><button>${character.name}</button></div>`)
@@ -252,9 +313,9 @@ $(() => {
             $('.selected-tile').append(upgrade_button)
           }
 
-          assets.map(w => {
+          tile.assets.map(w => {
             const asset = x.game.assets[w]
-            $('.selected-tile').append(`<h4>${asset.name}</h4>`)
+            $('.selected-tile').append(`<h4>${asset.asset.name}</h4>`)
           })
         } else {
           $('.selected-tile').hide()
@@ -268,7 +329,9 @@ $(() => {
 
         setTimeout(update, 500)
       })
-      .catch(() => {
+      .catch(err => {
+        console.error(err)
+
         setTimeout(update, 500)
       })
   }

@@ -4,6 +4,31 @@ const action_handlers = require('./action_handlers')
 const blank_hash = '0000000000000000000000000000000000000000000000000000000000000000'
 const h = require('./hash')
 
+const tasks = {
+  move: () => {
+
+  },
+
+  pickup: () => {
+
+  },
+
+  drop: () => {
+
+  }
+}
+
+const jobs = {
+  chop: ({ to, pos }) => {
+    return [
+      move(pos),
+      pickup(),
+      move(to),
+      drop()
+    ]
+  }
+}
+
 const createWorld = _ => {
   const random = createRandom(blank_hash)
   const chance = percent => random(100) <= percent
@@ -53,17 +78,186 @@ const createView = (existing, update) => {
     assets: {},
   }
 
-  view.add_asset = asset => {
-    const hash = h(asset)
+  const find = hash => {
+    for (let column of view.world) {
+      const x = view.world.indexOf(column)
 
-    view.assets[hash] = {
-      asset,
-      state: {},
-      hash,
-      set_goal: () => {
-        
+      for (let tile of column) {
+        const y = column.indexOf(tile)
+
+        if (tile.assets.includes(hash)) {
+          return { x, y }
+        }
       }
     }
+  }
+
+  const pos_match = (a, b) => {
+    return a.x === b.x && a.y === b.y
+  }
+
+  const find_path = (from, to) => {
+    console.log(`Find path ${from.x}:${from.y} -> ${to.x}:${to.y}`)
+
+    const nodes = []
+
+    const create_path_node = (x, y, previous) => {
+      if (!view.world[x] || !view.world[x][y]) {
+        return
+      }
+
+      // if (view.world[x][y].resources.tree || view.world[x][y].resources.stone) {
+      //   return
+      // }
+
+      if (nodes.find(n => n.x === x && n.y === y)) {
+        return
+      }
+
+      const cost = previous && (previous.cost + 1) || 0
+      const prediction = Math.abs(to.x - x) + Math.abs(to.y - y)
+      const total = cost + prediction
+
+      const node = { cost, total, prediction, x, y, previous }
+      nodes.push(node)
+    }
+
+    const next = () => {
+      nodes.sort((a, b) => b.total - a.total)
+      const node = nodes[nodes.length - 1]
+
+      if (node.prediction === 0) {
+        return node
+      }
+
+      create_path_node(node.x, node.y + 1, node)
+      create_path_node(node.x + 1, node.y, node)
+      create_path_node(node.x, node.y - 1, node)
+      create_path_node(node.x - 1, node.y, node)
+
+      nodes.splice(nodes.indexOf(node), 1)
+    }
+
+    create_path_node(from.x, from.y)
+
+    let cap = 0
+    while (!next()) {
+      if (cap > 1000) {
+        throw new Error('Bad pathing')
+      }
+
+      cap = cap + 1
+    }
+
+    const finish = next()
+    let current = finish
+    const path = []
+
+    while (current.previous) {
+      path.unshift({ x: current.x, y: current.y })
+
+      current = current.previous
+    }
+
+    return path
+  }
+
+  view.add_asset = obj => {
+    const hash = h(obj)
+
+    const state = {}
+
+    const asset = {
+      asset: obj,
+      state,
+      hash,
+      set_goal: goal => {
+        state.goal = goal
+      }
+    }
+
+    state.step = (pos) => {
+      if (state.path.length === 0) {
+        console.log('step done')
+        delete state.path
+        // delete state.goal
+
+        return true
+      } else {
+        const next = state.path.shift()
+        console.log('next step', `${next.x}:${next.y}`)
+        const world = view.world
+
+        world[pos.x][pos.y].assets = world[pos.x][pos.y].assets.filter(x => x !== hash)
+        world[next.x][next.y].assets.push(hash)
+      }
+    }
+
+    asset.tick = () => {
+      if (state.goal && state.goal.type === 'move') {
+        const { to } = asset.state.goal
+        const pos = find(hash)
+
+        if (!state.path) {
+          state.path = find_path(pos, to)
+        }
+
+        if (state.path) {
+          state.step(pos)
+        }
+      }
+
+      // if (state.goal) {
+      //   if (!state.job) {
+      //     state.job = jobs[state.goal.type](state.goal)
+      //   }
+
+      //   if (!state.task) {
+          
+      //   }
+      // }
+
+      if (state.goal && state.goal.type === 'chop') {
+        const { to, pos } = asset.state.goal
+        const current = find(hash)
+
+        if (!state.path) {
+          // If I not has resource
+          if (!state.resources || !state.resources.wood) {
+            state.path = find_path(current, pos)
+          }
+
+          // If i has resource
+          if (state.resources && state.resources.wood) {
+            state.path = find_path(current, to)
+          }
+
+          // if got resource && not what I want
+        }
+
+        if (state.step(current)) {
+          if (pos_match(current, pos)) {
+            const resource_tile = view.world[pos.x][pos.y]
+            const amount = Math.min(resource_tile.resources.trees, 1)
+            resource_tile.resources.trees -= amount
+            state.resources = state.resources || {}
+            state.resources.wood = state.resources.wood || 0
+            state.resources.wood = state.resources.wood + 1
+          }
+
+          if (pos_match(current, to)) {
+            const drop_tile = view.world[to.x][to.y]
+            
+            const amount = state.resources.wood
+            state.resources.wood = state.resources.wood - amount
+            drop_tile.resources.wood = drop_tile.resources.wood || 0
+            drop_tile.resources.wood = drop_tile.resources.wood + amount
+          }
+        }
+      }
+    }
+
+    view.assets[hash] = asset
 
     return hash
   }
@@ -103,7 +297,7 @@ const createView = (existing, update) => {
       const coin_base = update.actions[0]
       const first_player = view.users[coin_base.user]
 
-      const eden = view.world[0][0]
+      const eden = view.world[0][1]
 
       const adam = {
         type: 'character',
@@ -124,24 +318,10 @@ const createView = (existing, update) => {
         mum: blank_hash,
         dad: blank_hash,
       }
-      
+
       const eve_hash = view.add_asset(eve)
       first_player.assets.push(eve_hash)
       eden.assets.push(eve_hash)
-    }
-
-    const find = hash => {
-      for (let column of view.world) {
-        const x = view.world.indexOf(column)
-
-        for (let tile of column) {
-          const y = column.indexOf(tile)
-
-          if (tile.assets.includes(hash)) {
-            return { x, y }
-          }
-        }
-      }
     }
 
     for (let user_id of Object.keys(view.users)) {
@@ -169,8 +349,8 @@ const createView = (existing, update) => {
 
         const partner = men.find(x => x.location.x === current.location.x && x.location.y === current.location.y)
         men.splice(men.indexOf(partner), 1)
-        
-        if (partner && chance(1)) {
+
+        if (partner && chance(3)) {
           const baby = {
             type: 'character',
             sex: chance(50) ? 'F' : 'M',
@@ -179,7 +359,7 @@ const createView = (existing, update) => {
           }
 
           baby.name = names[baby.sex][random(names[baby.sex].length)]
-    
+
           const baby_hash = h(baby)
           if (!view.assets[baby_hash]) { // No duplicate babys!
             view.add_asset(baby)
@@ -190,6 +370,8 @@ const createView = (existing, update) => {
       }
     }
   }
+
+  Object.values(view.assets).map(x => x.tick && x.tick())
 
   view.apply = block => createView(view, block)
   return view

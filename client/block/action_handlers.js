@@ -204,28 +204,56 @@ module.exports = {
     }
   },
 
-  'chop': {
-    update_view: ({ character, pos, to }, view) => {
+  'move': {
+    update_view: ({ character, to }, view) => {
       const character_asset = view.assets[character]
 
       character_asset.set_goal({
-        type: 'chop',
-        pos,
+        type: 'move',
         to
       })
-
-      // Adding holding property will break hash
-      if (character_asset.state.holding) {
-        // need to drop
-
-        return
-      }
-
-
     },
 
-    valid: () => {
+    valid: ({ character, user }, view) => {
+      return view.users[user].assets.includes(character)
+    }
+  },
 
+  'job': {
+    update_view: ({ character, job, pos, to }, view) => {
+      const character_asset = view.assets[character]
+
+      character_asset.set_goal({
+        type: job,
+        pos,
+        to,
+      })
+    },
+
+    valid: ({ character, user }, view) => {
+      return view.users[user].assets.includes(character)
+    }
+  },
+
+  'build': {
+    update_view: ({ building, character, pos }, view) => {
+      const character_asset = view.assets[character]
+
+      character_asset.set_goal({
+        type: 'build',
+        pos,
+        building
+      })
+    },
+
+    valid: ({ building, character, pos }, view) => {
+      const tile = view.world[pos.x][pos.y]
+
+      if (tile.building) {
+        return false
+      }
+
+      return true
     }
   }
 }
