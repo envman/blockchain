@@ -24,7 +24,7 @@ const createWorld = _ => {
 
       let amount
       if (resource) {
-        amount = random(100)
+        amount = random(10)
       }
 
       world[x][y] = {
@@ -36,6 +36,10 @@ const createWorld = _ => {
 
       if (resource) {
         world[x][y].resources[resource] = amount
+
+        if (resource === 'tree') {
+          world[x][y].resources.sticks = random(10)
+        }
       }
     }
   }
@@ -218,7 +222,9 @@ const createView = (existing, update) => {
     build: (building, building_location, free) => {
       return (current, view) => {
         const tile = view.world[building_location.x][building_location.y]
-        tile.building = building
+        tile.building = {
+          type: building
+        }
 
         if (!free) {
           tile.resources.wood -= 5

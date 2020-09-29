@@ -20,7 +20,7 @@ const colors = {
   15: '#FFCDF3',
 }
 
-const loadImage = image => {
+const load_image = image => {
   return new Promise((resolve, _) => {
     const img = new Image()
     img.src = image
@@ -28,54 +28,32 @@ const loadImage = image => {
   })
 }
 
-let tree
-let grass
-let stone
-let character
-let log
-let logs
-let tent
-let farm
-let field
-let field_growing
-let field_planted
-let carrot
+const images = [
+  'tree',
+  'carrot',
+  'field_planted',
+  'field_growing',
+  'field',
+  'farm',
+  'tent',
+  'log',
+  'logs',
+  'character',
+  'stone',
+  'grass',
+  'campfire',
+  'campfire_lit',
+  'campfire_out',
+  'sticks',
+]
 
-loadImage('/img/tree.png')
-  .then(x => tree = x)
+const load_images = () => {
+  const output = {}
 
-loadImage('/img/grass.png')
-  .then(x => grass = x)
-
-loadImage('/img/stone.png')
-  .then(x => stone = x)
-
-loadImage('/img/character.png')
-  .then(x => character = x)
-
-loadImage('/img/logs.png')
-  .then(x => logs = x)
-
-loadImage('/img/log.png')
-  .then(x => log = x)
-
-loadImage('/img/tent.png')
-  .then(x => tent = x)
-
-loadImage('/img/farm.png')
-  .then(x => farm = x)
-
-loadImage('/img/field.png')
-  .then(x => field = x)
-
-loadImage('/img/field_growing.png')
-  .then(x => field_growing = x)
-
-loadImage('/img/field_planted.png')
-  .then(x => field_planted = x)
-
-loadImage('/img/carrot.png')
-  .then(x => carrot = x)
+  return Promise.all(images
+    .map(i => load_image(`/img/${i}.png`).then(image => output[i] = image)))
+    .then(_ => output)
+}
 
 const window_size = {
   height: 800,
@@ -90,7 +68,7 @@ const square = {
   height: window_size.height / height,
 }
 
-const draw = ({ game, user }) => {
+const draw = ({ game, user }, images) => {
   for (let column of game.world) {
     const x = game.world.indexOf(column)
 
@@ -108,53 +86,63 @@ const draw = ({ game, user }) => {
 
       ctx.fillStyle = 'green'
 
-      if (grass) {
-        ctx.drawImage(grass, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
-      }
+      ctx.drawImage(images.grass, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
 
       ctx.font = '14px serif';
       ctx.fillStyle = "#000000"
 
       ctx.fillText(`${tile.assets.length}`, (x * square.width) + 2, (y * square.height) + 45)
 
-      if (tile.building && tile.building === 'tent') {
-        ctx.drawImage(tent, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      if (tile.building && tile.building.type === 'tent') {
+        ctx.drawImage(images.tent, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
-      if (tile.building && tile.building === 'farm') {
-        ctx.drawImage(farm, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      if (tile.building && tile.building.type === 'farm') {
+        ctx.drawImage(images.farm, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
-      if (tile.building && tile.building === 'field') {
+      if (tile.building && tile.building.type === 'field') {
         if (tile.planted === 1) {
-          ctx.drawImage(field_planted, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+          ctx.drawImage(images.field_planted, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
         } else if (tile.planted === 2) {
-          ctx.drawImage(field_growing, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+          ctx.drawImage(images.field_growing, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
         } else {
-          ctx.drawImage(field, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+          ctx.drawImage(images.field, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
         }
       }
 
-      if (tile.resources.tree && tree) {
-        ctx.drawImage(tree, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      if (tile.building && tile.building.type === 'campfire') {
+        if (tile.building.lit) {
+          ctx.drawImage(images.campfire_lit, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+        } else if (tile.building.out) {
+          ctx.drawImage(images.campfire_out, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+        } else {
+          ctx.drawImage(images.campfire, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+        }
       }
 
-      if (tile.resources.stone && stone) {
-        ctx.drawImage(stone, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      if (tile.resources.tree) {
+        ctx.drawImage(images.tree, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      } else if (tile.resources.sticks) {
+        ctx.drawImage(images.sticks, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
-      if (tile.resources.carrots && carrot && tile.building !== 'farm') {
-        ctx.drawImage(carrot, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      if (tile.resources.stone) {
+        ctx.drawImage(images.stone, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
-      if (tile.resources.wood && log && logs) {
-        const image = tile.resources.wood > 1 ? logs : log
+      if (tile.resources.carrots && tile.building && tile.building.type !== 'farm') {
+        ctx.drawImage(images.carrot, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      }
+
+      if (tile.resources.wood) {
+        const image = tile.resources.wood > 1 ? images.logs : images.log
 
         ctx.drawImage(image, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
-      if (tile.assets.length > 0 && character) {
-        ctx.drawImage(character, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
+      if (tile.assets.length > 0) {
+        ctx.drawImage(images.character, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
     }
   }
@@ -249,165 +237,168 @@ const action_builder = (steps) => {
 }
 
 $(() => {
-  const update = () => {
-    fetch(`${window.location.origin}/view`, {})
-      .then(res => res.json())
-      .then(x => {
-        draw(x)
-        $('.user').text(`User: ${x.user.username}`)
-        $('.turn').text(`Turn: ${x.game.turn}`)
-        $('.cash').html(x.user.cash)
+  load_images()
+    .then(images => {
+      const update = () => {
+        fetch(`${window.location.origin}/view`, {})
+          .then(res => res.json())
+          .then(x => {
+            draw(x, images)
+            $('.user').text(`User: ${x.user.username}`)
+            $('.turn').text(`Turn: ${x.game.turn}`)
+            $('.cash').html(x.user.cash)
 
-        $('.action-builder').empty()
+            $('.action-builder').empty()
 
-        const action = current_action && current_action()
-        if (action) {
-          $('.action-builder').append(`<h3>${action.name}<h3>`)
-        }
-
-        const characters = x.user.assets.map(a => ({ hash: a, character: x.game.assets[a].asset }))
-
-        $('.characters').empty()
-        if (selected_character) {
-          $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
-
-          const button = (name, click) => {
-            const button = $(`<button>${name}</button>`)
-            button.click(click)
-            $('.characters').append(button)
-          }
-
-          button('move', _ => {
-            const action = {
-              type: 'move',
-              character: selected_character.hash
+            const action = current_action && current_action()
+            if (action) {
+              $('.action-builder').append(`<h3>${action.name}<h3>`)
             }
 
-            action_builder([
-              selectPosition('Select target location', x => action.to = x),
-              publish(action)
-            ])
-          })
+            const characters = x.user.assets.map(a => ({ hash: a, character: x.game.assets[a].asset }))
 
-          button('chop', _ => {
-            const action = {
-              type: 'job',
-              job: 'chop',
-              character: selected_character.hash
-            }
+            $('.characters').empty()
+            if (selected_character) {
+              $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
 
-            action_builder([
-              selectPosition('Select resource location', x => action.pos = x),
-              selectPosition('Select target location', x => action.to = x),
-              publish(action)
-            ])
-          })
+              const button = (name, click) => {
+                const button = $(`<button>${name}</button>`)
+                button.click(click)
+                $('.characters').append(button)
+              }
 
-          button('work', _ => {
-            const action = {
-              type: 'job',
-              job: 'work',
-              character: selected_character.hash
-            }
+              button('move', _ => {
+                const action = {
+                  type: 'move',
+                  character: selected_character.hash
+                }
 
-            action_builder([
-              selectPosition('Select work location', x => action.work_location = x),
-              publish(action)
-            ])
-          })
-
-          button('build-tent', _ => {
-            const action = {
-              type: 'build',
-              building: 'tent',
-              character: selected_character.hash
-            }
-
-            action_builder([
-              selectPosition('Select resource location', x => action.resource_location = x),
-              selectPosition('Select building location', x => action.building_location = x),
-              publish(action)
-            ])
-          })
-
-          button('build-farm', _ => {
-            const action = {
-              type: 'build',
-              building: 'farm',
-              character: selected_character.hash
-            }
-
-            action_builder([
-              selectPosition('Select resource location', x => action.resource_location = x),
-              selectPosition('Select building location', x => action.building_location = x),
-              publish(action)
-            ])
-          })
-        } else {
-          characters.map(({ hash, character }) => {
-            const character_button = $(`<div><button>${character.name}</button></div>`)
-
-            character_button.click(_ => {
-              selected_character = { hash, character }
-            })
-
-            $('.characters').append(character_button)
-          })
-        }
-
-        if (selected_tile) {
-          $('.selected-tile').show()
-          $('.selected-tile').empty()
-
-          const tile = x.game.world[selected_tile.x][selected_tile.y]
-
-          const { assets, building } = tile
-          const owner = tile.owner || 'None'
-
-          $('.selected-tile').append(`<h3>${selected_tile.x}:${selected_tile.y} | Owner: ${owner}</h3>`)
-
-          if (building) {
-            $('.selected-tile').append(`<h3>${building.name} (lvl ${building.level})</h3>`)
-            const upgrade_button = $(`<button class="upgrade-building">Upgrade Building</button>`)
-
-            upgrade_button.click(() => {
-              console.log('click')
-              publish_action({
-                type: 'upgrade-building',
-                pos: selected_tile,
+                action_builder([
+                  selectPosition('Select target location', x => action.to = x),
+                  publish(action)
+                ])
               })
+
+              button('chop', _ => {
+                const action = {
+                  type: 'job',
+                  job: 'chop',
+                  character: selected_character.hash
+                }
+
+                action_builder([
+                  selectPosition('Select resource location', x => action.pos = x),
+                  selectPosition('Select target location', x => action.to = x),
+                  publish(action)
+                ])
+              })
+
+              button('work', _ => {
+                const action = {
+                  type: 'job',
+                  job: 'work',
+                  character: selected_character.hash
+                }
+
+                action_builder([
+                  selectPosition('Select work location', x => action.work_location = x),
+                  publish(action)
+                ])
+              })
+
+              button('build-tent', _ => {
+                const action = {
+                  type: 'build',
+                  building: 'tent',
+                  character: selected_character.hash
+                }
+
+                action_builder([
+                  selectPosition('Select resource location', x => action.resource_location = x),
+                  selectPosition('Select building location', x => action.building_location = x),
+                  publish(action)
+                ])
+              })
+
+              button('build-farm', _ => {
+                const action = {
+                  type: 'build',
+                  building: 'farm',
+                  character: selected_character.hash
+                }
+
+                action_builder([
+                  selectPosition('Select resource location', x => action.resource_location = x),
+                  selectPosition('Select building location', x => action.building_location = x),
+                  publish(action)
+                ])
+              })
+            } else {
+              characters.map(({ hash, character }) => {
+                const character_button = $(`<div><button>${character.name}</button></div>`)
+
+                character_button.click(_ => {
+                  selected_character = { hash, character }
+                })
+
+                $('.characters').append(character_button)
+              })
+            }
+
+            if (selected_tile) {
+              $('.selected-tile').show()
+              $('.selected-tile').empty()
+
+              const tile = x.game.world[selected_tile.x][selected_tile.y]
+
+              const { assets, building } = tile
+              const owner = tile.owner || 'None'
+
+              $('.selected-tile').append(`<h3>${selected_tile.x}:${selected_tile.y} | Owner: ${owner}</h3>`)
+
+              if (building) {
+                $('.selected-tile').append(`<h3>${building.name} (lvl ${building.level})</h3>`)
+                const upgrade_button = $(`<button class="upgrade-building">Upgrade Building</button>`)
+
+                upgrade_button.click(() => {
+                  console.log('click')
+                  publish_action({
+                    type: 'upgrade-building',
+                    pos: selected_tile,
+                  })
+                })
+
+                $('.selected-tile').append(upgrade_button)
+              }
+
+              tile.assets.map(w => {
+                const asset = x.game.assets[w]
+                $('.selected-tile').append(`<h4>${asset.asset.name}</h4>`)
+              })
+              Object.keys(tile.resources)
+                .map(key => {
+                  const value = tile.resources[key]
+                  $('.selected-tile').append(`<h4>${key}:${value}</h4>`)
+                })
+            } else {
+              $('.selected-tile').hide()
+            }
+
+            $('.trades').empty()
+
+            x.game.trades.map(x => {
+              $('.trades').append(`<div>${x.type}</div>`)
             })
 
-            $('.selected-tile').append(upgrade_button)
-          }
-
-          tile.assets.map(w => {
-            const asset = x.game.assets[w]
-            $('.selected-tile').append(`<h4>${asset.asset.name}</h4>`)
+            setTimeout(update, 500)
           })
-          Object.keys(tile.resources)
-            .map(key => {
-              const value = tile.resources[key]
-              $('.selected-tile').append(`<h4>${key}:${value}</h4>`)
-            })
-        } else {
-          $('.selected-tile').hide()
-        }
+          .catch(err => {
+            console.error(err)
 
-        $('.trades').empty()
+            setTimeout(update, 500)
+          })
+      }
 
-        x.game.trades.map(x => {
-          $('.trades').append(`<div>${x.type}</div>`)
-        })
-
-        setTimeout(update, 500)
-      })
-      .catch(err => {
-        console.error(err)
-
-        setTimeout(update, 500)
-      })
-  }
-
-  setTimeout(update, 500)
+      setTimeout(update, 500)
+    })
 })
