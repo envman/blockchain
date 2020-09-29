@@ -50,6 +50,10 @@ module.exports = (connection, host) => {
       throw new Error(`Cannot request null hash`)
     }
 
+    if (!msg.type) {
+      throw new Error(`Missing message type`)
+    }
+
     console.log(`NET SEND: ${JSON.stringify(msg).slice(0, 100)}`)
 
     if (!msg.type) {

@@ -11,17 +11,20 @@ const wallet = require('./wallet')
 const create_loader = require('./loader')
 const default_meta = require('./default_meta')
 
-const difficulty = 2
+const difficulty = 3
 
 module.exports = (opts) => {
   const save_dir = opts.data_root || path.join(__dirname, '..', '..', 'data')
+  const objects_dir = path.join(save_dir, 'objects')
   const meta_path = path.join(save_dir, 'meta.json')
 
   if (opts.wipe) {
-    fs.removeSync(save_dir)
+    fs.removeSync(objects_dir)
   }
 
-  fs.mkdirpSync(save_dir)
+  fs.mkdirpSync(objects_dir)
+
+  opts.data_dir = save_dir
 
   const have = hash => fs.exists(path.join(save_dir, `${hash}.json`))
 
@@ -37,7 +40,7 @@ module.exports = (opts) => {
   }
 
   const load = hash => {
-    const dir = path.join(save_dir, `${hash}.json`)
+    const dir = path.join(objects_dir, `${hash}.json`)
 
     return fs.exists(dir)
       .then(exists => {
@@ -45,14 +48,14 @@ module.exports = (opts) => {
           return
         }
 
-        return fs.readFile(path.join(save_dir, `${hash}.json`), 'utf8')
+        return fs.readFile(path.join(objects_dir, `${hash}.json`), 'utf8')
           .then(JSON.parse)
       })
   }
 
   const save = (hash, object) => Promise.resolve(object)
     .then(x => JSON.stringify(x, null, 2))
-    .then(x => fs.writeFile(path.join(save_dir, `${hash}.json`), x))
+    .then(x => fs.writeFile(path.join(objects_dir, `${hash}.json`), x))
 
   return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts), load_meta()])
     .then(([network, user, meta]) => {

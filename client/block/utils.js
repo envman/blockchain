@@ -3,8 +3,10 @@ function getRandom(arr, n) {
       len = arr.length,
       taken = new Array(len);
       
-  if (n > len)
-      throw new RangeError("getRandom: more elements taken than available");
+  if (n > len) {
+    n = len
+  }
+      // throw new RangeError("getRandom: more elements taken than available");
 
   while (n--) {
       var x = Math.floor(Math.random() * len);
@@ -15,5 +17,6 @@ function getRandom(arr, n) {
 }
 
 module.exports = {
-  getRandom
+  getRandom,
+  get_random: getRandom
 }

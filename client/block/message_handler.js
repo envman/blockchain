@@ -1,18 +1,16 @@
 const h = require('./hash')
 const validate_signature = require('./validate_signature')
 
-module.exports = ({ objects, network, broadcast, rumors, addresses }) => {
+module.exports = ({ objects, network, broadcast, addresses }) => {
   const network_messages = {
-    greet: (msg, peer) => {
-      const existing = addresses.find(x => x.port === msg.port)
+    greet: ({ port, ip }, peer) => {
+      addresses.add({ port, ip })
     },
 
     publish: (msg, peer) => {
       objects.load(msg.hash)
         .then(existing => {
           if (!existing) {
-            rumors.add(msg.hash)
-
             peer.send({
               type: 'request',
               hash: msg.hash
