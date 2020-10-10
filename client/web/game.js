@@ -123,7 +123,7 @@ const draw = ({ game, user }, images) => {
 
       if (tile.resources.tree) {
         ctx.drawImage(images.tree, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
-      } else if (tile.resources.sticks) {
+      } else if (!tile.building && tile.resources.sticks) {
         ctx.drawImage(images.sticks, (x * square.height) + 1, (y * square.width) + 1, square.height - 2, square.width - 2)
       }
 
@@ -255,11 +255,12 @@ $(() => {
               $('.action-builder').append(`<h3>${action.name}<h3>`)
             }
 
-            const characters = x.user.assets.map(a => ({ hash: a, character: x.game.assets[a].asset }))
+            const characters = x.user.assets.map(a => ({ hash: a, character: x.game.assets[a].asset, state: x.game.assets[a].state }))
 
             $('.characters').empty()
             if (selected_character) {
-              $('.characters').append(`<h2>${selected_character.character.name}</h2>`)
+              const state = selected_character.state.current || 'idle'
+              $('.characters').append(`<h2>${selected_character.character.name} - ${state}</h2>`)
 
               const button = (name, click) => {
                 const button = $(`<button>${name}</button>`)
@@ -334,11 +335,12 @@ $(() => {
                 ])
               })
             } else {
-              characters.map(({ hash, character }) => {
+              characters.map(({ hash, character, state }) => {
+
                 const character_button = $(`<div><button>${character.name}</button></div>`)
 
                 character_button.click(_ => {
-                  selected_character = { hash, character }
+                  selected_character = { hash, character, state }
                 })
 
                 $('.characters').append(character_button)

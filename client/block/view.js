@@ -57,6 +57,8 @@ const createView = (existing, update) => {
     assets: {},
   }
 
+  view.find_tile = ({ x, y }) => view.world[x][y]
+
   const find = hash => {
     for (let column of view.world) {
       const x = view.world.indexOf(column)
@@ -76,7 +78,7 @@ const createView = (existing, update) => {
 
     for (let x = pos.x - limit; x <= pos.x + limit; x++) {
       for (let y = pos.y - limit; y <= pos.y + limit; y++) {
-        let tile = view.world[x][y]
+        let tile = view.world[x] && view.world[x][y]
 
         if (skip_center && x === pos.x && y === pos.y) {
           continue
@@ -223,7 +225,26 @@ const createView = (existing, update) => {
       return (current, view) => {
         const tile = view.world[building_location.x][building_location.y]
         tile.building = {
-          type: building
+          type: building,
+          created: view.turn
+        }
+
+        if (building === 'campfire') {
+          tile.building.lit = true
+
+          tile.building.tick = view => {
+            const age = view.turn - tile.building.created
+
+            if (tile.building.lit) {
+              if (age % 5 === 0) {
+                tile.resources.sticks = tile.resources.sticks - 1
+              }
+  
+              if (tile.resources.sticks < 1) {
+                tile.building.lit = false
+              }
+            }
+          }
         }
 
         if (!free) {
@@ -240,6 +261,18 @@ const createView = (existing, update) => {
         tile.planted = 1
         return true
       }
+    },
+
+    update: (pos, update) => {
+      return (current, view) => {
+        const tile = view.find_tile(pos)
+        update(tile)
+        return true
+      }
+    },
+
+    wait: () => {
+      return () => true
     }
   }
 
@@ -283,48 +316,141 @@ const createView = (existing, update) => {
     },
 
     work: ({ work_location }, view) => {
-      const grown = find_tile(work_location, 1, t => t.resources.carrots, true)
-      if (grown) {
+      const work_tile = view.find_tile(work_location)
+
+      if (work_tile.building && work_tile.building.type === 'farm') {
+        const grown = find_tile(work_location, 1, t => t.resources.carrots, true)
+        if (grown) {
+          return {
+            set: 'harvesting',
+            tasks: [
+              tasks.move(grown),
+              tasks.pickup('carrots', 1),
+              tasks.move(work_location),
+              tasks.drop('carrots', 1)
+            ]
+          }
+        }
+
+        const empty = find_tile(work_location, 1, t => t.building === 'field' && !t.planted)
+        if (empty) {
+          return {
+            set: 'planting',
+            tasks: [
+              tasks.move(empty),
+              tasks.plant(empty),
+              tasks.move(work_location),
+            ]
+          }
+        }
+
+        const land = find_tile(work_location, 1, t => !t.building && Object.keys(t.resources).length < 1)
+
+        if (land) {
+          return {
+            set: 'building',
+            tasks: [
+              tasks.move(land),
+              tasks.build('field', land, true),
+              tasks.move(work_location),
+            ]
+          }
+        }
+
         return {
-          set: 'harvesting',
-          tasks: [
-            tasks.move(grown),
-            tasks.pickup('carrots', 1),
-            tasks.move(work_location),
-            tasks.drop('carrots', 1)
-          ]
+          set: 'waiting',
+          tasks: []
         }
       }
 
-      const empty = find_tile(work_location, 1, t => t.building === 'field' && !t.planted)
-      if (empty) {
-        return {
-          set: 'planting',
-          tasks: [
-            tasks.move(empty),
-            tasks.plant(empty),
-            tasks.move(work_location),
-          ]
+      if (!work_tile.building) {
+        if (!work_tile.resources.sticks || work_tile.resources.sticks < 4) {
+          const sticks_tile = find_tile(work_location, 20, t => t.resources.sticks > 0, true)
+
+          if (!sticks_tile) {
+            return {
+              set: 'waiting',
+              tasks: [tasks.wait()]
+            }
+          }
+
+          return {
+            set: 'gathering resources',
+            tasks: [
+              tasks.move(sticks_tile),
+              tasks.pickup('sticks', 1),
+              tasks.move(work_location),
+              tasks.drop('sticks', 1)
+            ]
+          }
+        } else {
+          return {
+            set: 'building campfire',
+            tasks: [
+              tasks.build('campfire', work_location, true)
+            ]
+          }
         }
       }
 
-      const land = find_tile(work_location, 1, t => !t.building && Object.keys(t.resources).length < 1)
+      if (work_tile.building.type === 'campfire') {
+        const { building } = work_tile 
 
-      if (land) {
-        return {
-          set: 'building',
-          tasks: [
-            tasks.move(land),
-            tasks.build('field', land, true),
-            tasks.move(work_location),
-          ]
+        if (!building.lit) {
+          if (work_tile.resources.sticks && work_tile.resources.sticks > 4) {
+
+            return {
+              set: 'lighting campfire',
+              tasks: [
+                tasks.update(work_location, x => x.building.lit = true)
+              ]
+            }
+          } else {
+            const sticks_tile = find_tile(work_location, 20, t => t.resources.sticks > 0, true)
+
+            if (!sticks_tile) {
+              return {
+                set: 'waiting',
+                tasks: [tasks.wait()]
+              }
+            }
+
+            return {
+              set: 'gathering resources',
+              tasks: [
+                tasks.move(sticks_tile),
+                tasks.pickup('sticks', 1),
+                tasks.move(work_location),
+                tasks.drop('sticks', 1)
+              ]
+            }
+          }
+        } else if (work_tile.resources.sticks <= 10) {
+          const sticks_tile = find_tile(work_location, 20, t => t.resources.sticks > 0, true)
+
+            if (!sticks_tile) {
+              return {
+                set: 'waiting',
+                tasks: [tasks.wait()]
+              }
+            }
+
+            return {
+              set: 'gathering resources',
+              tasks: [
+                tasks.move(sticks_tile),
+                tasks.pickup('sticks', 1),
+                tasks.move(work_location),
+                tasks.drop('sticks', 1)
+              ]
+            }
         }
       }
 
       return {
         set: 'waiting',
         tasks: [
-
+          tasks.wait()
         ]
       }
     }
@@ -352,7 +478,7 @@ const createView = (existing, update) => {
         current_index = 0
       }
 
-      return tasks.tasks[current_index]
+      return { task: tasks.tasks[current_index], current: tasks.set }
     }
   }
 
@@ -394,7 +520,11 @@ const createView = (existing, update) => {
         }
 
         if (!state.task) {
-          state.task = state.job()
+          const { task, current } = state.job()
+
+          state.task = task
+          state.current = current
+
           if (!state.task) {
             delete state.goal
             delete state.job
@@ -528,6 +658,10 @@ const createView = (existing, update) => {
         } else if (tile.planted === 2 && chance(5)) {
           tile.resources.carrots = 1
           delete tile.planted
+        }
+
+        if (tile.building && tile.building.tick) {
+          tile.building.tick(view)
         }
       }
     }

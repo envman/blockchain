@@ -106,10 +106,6 @@ module.exports = {
         return false
       }
 
-      if (tile.building) {
-        return false
-      }
-
       return true
     }
   }
