@@ -1,0 +1,15 @@
+{
+  "name": "prototypes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "difficulty.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "moment": "^2.29.1",
+    "sha256": "^0.2.0"
+  }
+}
