@@ -2,7 +2,7 @@ const fs = require('fs-extra')
 const path = require('path')
 const { get_random } = require('./utils')
 
-module.exports = ({ data_dir }) => {
+module.exports = ({ data_dir, test_mode }) => {
   const store_location = path.join(data_dir, 'addresses.json')
 
   return fs.exists(store_location)
@@ -11,16 +11,20 @@ module.exports = ({ data_dir }) => {
     .then(JSON.parse)
     .then(addresses => {
       return {
-        add: address => {
-          if (!addresses.find(x => x.port === address.port && x.ip === address.ip)) {
-            addresses.push(address)
+        add: ({ ip, port }) => {
+          if (test_mode === 'true') {
+            ip = '127.0.0.1'
+          }
+
+          if (!addresses.find(x => x.port === port && x.ip === ip)) {
+            addresses.push({ ip, port })
           }
       
           return fs.writeFile(store_location, JSON.stringify(addresses, null, 2))
         },
       
         get: count => {
-          return get_random(addresses, count)
+          return get_random(addresses, count).filter(x => x)
         }
       }
     })

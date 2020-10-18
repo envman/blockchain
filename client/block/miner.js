@@ -7,7 +7,7 @@ console.log('miner loaded')
 
 process.on('message', (msg) => {
   if (msg.type === 'block') {
-    console.time('mine-time')
+    // console.time('mine-time')
     currentBlock = msg.body
   }
 
@@ -21,7 +21,7 @@ function run() {
     let attempt = hash(currentBlock)
 
     if (isSolution(attempt, currentBlock.difficulty)) {
-      console.timeEnd('mine-time')
+      // console.timeEnd('mine-time')
 
       process.send({
         type: 'block',

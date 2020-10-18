@@ -4,12 +4,11 @@ const vaidate_signature = require('./validate_signature')
 
 const alive_time = 60000 * 2
 
-module.exports = (connection, host) => {
+module.exports = (connection, ip, port) => {
   const peer = new EventEmitter()
 
-  // console.log('add', host)
-
-  // peer.host = connection.fulladdress
+  peer.ip = ip
+  peer.port = port
 
   connection.on('error', () => {
     peer.emit('close')
@@ -32,6 +31,8 @@ module.exports = (connection, host) => {
   }
 
   connection.on('message', message => {
+    // console.log('RAW_MESSAGE', message)
+
     reset_dead()
 
     if (message.type === 'ping') {
@@ -54,7 +55,7 @@ module.exports = (connection, host) => {
       throw new Error(`Missing message type`)
     }
 
-    console.log(`NET SEND: ${JSON.stringify(msg).slice(0, 100)}`)
+    // console.log(`NET SEND: ${JSON.stringify(msg).slice(0, 100)}`)
 
     if (!msg.type) {
       throw new Error(`No message type`)

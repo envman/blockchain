@@ -1,10 +1,21 @@
 const h = require('./hash')
 const validate_signature = require('./validate_signature')
 
-module.exports = ({ objects, network, broadcast, addresses }) => {
+module.exports = ({ objects, network, broadcast, addresses, my_id }) => {
   const network_messages = {
-    greet: ({ port, ip }, peer) => {
+    greet: ({ port, ip, id }, peer) => {
+      if (id === my_id) {
+        peer.emit('close')
+        return
+      }
+
       addresses.add({ port, ip })
+
+      peer.id = id
+    },
+
+    addr: (msg) => {
+      addresses.add(...msg.addresses)
     },
 
     publish: (msg, peer) => {
@@ -62,12 +73,19 @@ module.exports = ({ objects, network, broadcast, addresses }) => {
   }
 
   return (msg, peer) => {
-    console.log(`NET GET: ${msg.type} ${JSON.stringify(msg).slice(0, 100)}`)
+    // console.log(`NET GET: ${msg.type} ${JSON.stringify(msg).slice(0, 100)}`)
+
+    if (msg.success === false) {
+      console.log('Failed connection?')
+      peer.emit('close')
+
+      return
+    }
 
     const handler = network_messages[msg.type]
 
     if (!handler) {
-      throw new Error(`No handler for ${JSON.stringify(msg)}`)
+      // throw new Error(`No handler for ${JSON.stringify(msg)}`)
       return console.error(`No handler for ${msg.type}`)
     }
 

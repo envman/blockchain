@@ -2,14 +2,17 @@ const net = require('net')
 const { promisify } = require('util')
 const { EventEmitter } = require('events')
 const JsonSocket = require('json-socket')
+const moment = require('moment')
+const shortid = require('shortid')
 const external_ip = promisify(require('external-ip')())
 const createPeer = require('./peer')
 const createMessageHandler = require('./message_handler')
 const create_addresses = require('./addresses')
 
-module.exports = ({ port, known, data_dir }, { load, save, have }) => {
-  return Promise.all([external_ip(), create_addresses({ data_dir })])
+module.exports = ({ port, known, data_dir, test_id, test_mode }, { load, save, have }) => {
+  return Promise.all([external_ip(), create_addresses({ data_dir, test_mode })])
     .then(([ip, addresses]) => {
+      const my_id = test_id || shortid()
       const peers = []
 
       const data = {
@@ -46,38 +49,42 @@ module.exports = ({ port, known, data_dir }, { load, save, have }) => {
 
         peers.push(peer)
 
-        const handler = createMessageHandler({ objects, network, broadcast, addresses })
+        const handler = createMessageHandler({ objects, network, broadcast, addresses, my_id })
 
         peer.on('message', msg => handler(msg, peer))
 
-        peer.send({ type: 'greet', ip, port: data.port })
+        peer.send({ type: 'greet', ip, port: data.port, id: my_id })
       }
 
       const connect = (fullAddress) => {
-        console.log('connect to ', fullAddress)
         let [address, port] = fullAddress.split(':')
 
+        if (peers.find(x => x.ip === address && x.port === port)) {
+          return
+        }
+
+        opts.log.info('connect to ', fullAddress)
         const client = new net.Socket()
         const socket = new JsonSocket(client)
 
         socket.connect(port, address, () => {
-          console.log(`Network Joined ${fullAddress}`)
+          opts.log.info(`Network Joined ${fullAddress}`)
 
           data.status = 'Connected'
-          addPeer(createPeer(socket))
+          addPeer(createPeer(socket, address, port))
         })
 
-        client.on('error', console.error)
+        client.on('error', err => opts.log.error(err))
       }
 
       server.on('connection', (connection) => {
-        // console.log('connection', connection.remoteAddress, connection.remotePort)
-
         const socket = new JsonSocket(connection)
 
         data.status = 'Connected'
 
-        const peer = createPeer(socket, connection.remoteAddress.split(':').pop())
+        const ip = connection.remoteAddress.split(':').pop()
+
+        const peer = createPeer(socket, ip, connection.remotePort)
         addPeer(peer)
       })
 
@@ -94,6 +101,16 @@ module.exports = ({ port, known, data_dir }, { load, save, have }) => {
         const [ip, port] = known.split(':')
         addresses.add({ ip, port: Number(port) })
       }
+
+      setInterval(() => {
+        broadcast({ type: 'addr', addresses: addresses.get(5) })
+      }, 3000)
+
+      setInterval(() => {
+        addresses.get(2)
+          .filter(x => x)
+          .map(({ip, port}) => connect(`${ip}:${port}`))
+      }, 4000)
 
       return Promise.resolve(network)
     })

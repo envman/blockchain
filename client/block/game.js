@@ -11,7 +11,7 @@ const wallet = require('./wallet')
 const create_loader = require('./loader')
 const default_meta = require('./default_meta')
 
-const difficulty = 2
+const difficulty = 3
 
 module.exports = (opts) => {
   const save_dir = opts.data_root || path.join(__dirname, '..', '..', 'data')
@@ -160,7 +160,7 @@ module.exports = (opts) => {
                     nonce: 0,
                     actions: [
                       coin_base.hash,
-                      ...todo.map(a => a.hash)
+                      ...todo.map(a => a.hash).filter((x, i, a) => a.indexOf(x) === i)
                     ]
                   }
                 })
@@ -246,7 +246,7 @@ module.exports = (opts) => {
           return {
             network: {
               status: network_view.status,
-              peers: network_view.peers.length,
+              peers: network_view.peers,
               port: network_view.port,
             },
 
