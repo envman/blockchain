@@ -1,10 +1,15 @@
 const h = require('./hash')
 const validate_signature = require('./validate_signature')
 
-module.exports = ({ objects, network, broadcast, addresses, my_id }) => {
+module.exports = ({ objects, network, broadcast, addresses, my_id, log, peers }) => {
   const network_messages = {
     greet: ({ port, ip, id }, peer) => {
       if (id === my_id) {
+        peer.emit('close')
+        return
+      }
+
+      if (peers.find(x => x.id === id)) {
         peer.emit('close')
         return
       }
@@ -19,7 +24,7 @@ module.exports = ({ objects, network, broadcast, addresses, my_id }) => {
     },
 
     publish: (msg, peer) => {
-      objects.load(msg.hash)
+      objects.have(msg.hash)
         .then(existing => {
           if (!existing) {
             peer.send({
@@ -53,6 +58,7 @@ module.exports = ({ objects, network, broadcast, addresses, my_id }) => {
           const hash = h(msg.object)
 
           if (hash !== msg.hash) {
+            log.error(`Hash mismatch h${hash} msg:${msg.hash} ${JSON.stringify(msg.object)}`)
             return console.error(`Hash Mismatch h:${hash} msg:${msg.hash}`)
           }
 
@@ -73,7 +79,7 @@ module.exports = ({ objects, network, broadcast, addresses, my_id }) => {
   }
 
   return (msg, peer) => {
-    // console.log(`NET GET: ${msg.type} ${JSON.stringify(msg).slice(0, 100)}`)
+    log.info(`NET GET: ${msg.type} ${JSON.stringify(msg)}`)
 
     if (msg.success === false) {
       console.log('Failed connection?')
@@ -85,8 +91,7 @@ module.exports = ({ objects, network, broadcast, addresses, my_id }) => {
     const handler = network_messages[msg.type]
 
     if (!handler) {
-      // throw new Error(`No handler for ${JSON.stringify(msg)}`)
-      return console.error(`No handler for ${msg.type}`)
+      return log.error(`No handler for ${msg.type}`)
     }
 
     return handler(msg, peer)

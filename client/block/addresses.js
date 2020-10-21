@@ -28,4 +28,8 @@ module.exports = ({ data_dir, test_mode }) => {
         }
       }
     })
+    .catch(err => {
+      console.error(`Error parsing addresses`)
+      throw err
+    })
 }

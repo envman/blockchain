@@ -8,8 +8,9 @@ const external_ip = promisify(require('external-ip')())
 const createPeer = require('./peer')
 const createMessageHandler = require('./message_handler')
 const create_addresses = require('./addresses')
+const { getRandom } = require('./utils')
 
-module.exports = ({ port, known, data_dir, test_id, test_mode }, { load, save, have }) => {
+module.exports = ({ port, known, data_dir, test_id, test_mode, log }, { load, save, have }) => {
   return Promise.all([external_ip(), create_addresses({ data_dir, test_mode })])
     .then(([ip, addresses]) => {
       const my_id = test_id || shortid()
@@ -26,16 +27,25 @@ module.exports = ({ port, known, data_dir, test_id, test_mode }, { load, save, h
 
       const network = new EventEmitter()
 
-      network.view = () => data
+      network.view = () => ({
+        status: data.status,
+        peers: data.peers.filter(x => x.id)
+      })
+      
       network.broadcast = broadcast
 
       network.request = (hash) => {
         // TODO: limit peers?
 
-        broadcast({
-          type: 'request',
-          hash
-        })
+        getRandom(peers, 2)
+          .map(p => p.send({
+            type: 'request',
+            hash
+          }))
+        // broadcast({
+        //   type: 'request',
+        //   hash
+        // })
       }
 
       const objects = {
@@ -45,11 +55,16 @@ module.exports = ({ port, known, data_dir, test_id, test_mode }, { load, save, h
       const server = net.createServer()
 
       const addPeer = peer => {
-        peer.on('close', () => peers.splice(peers.indexOf(peer), 1))
+        peer.on('close', () => {
+          log.info(`Close connection to ${peer.ip}:${peer.port}`)
+          log.info(`Remove peer ${peers.length}`)
+          peers.splice(peers.indexOf(peer), 1)
+          log.info(`Removed peer ${peers.length}`)
+        })
 
         peers.push(peer)
 
-        const handler = createMessageHandler({ objects, network, broadcast, addresses, my_id })
+        const handler = createMessageHandler({ objects, network, broadcast, addresses, my_id, log, peers })
 
         peer.on('message', msg => handler(msg, peer))
 
@@ -57,24 +72,28 @@ module.exports = ({ port, known, data_dir, test_id, test_mode }, { load, save, h
       }
 
       const connect = (fullAddress) => {
+        if (!fullAddress || fullAddress.trim().length === 0 || fullAddress.split(':').length < 2) {
+          throw new Error(`Invalid address`)
+        }
+
         let [address, port] = fullAddress.split(':')
 
         if (peers.find(x => x.ip === address && x.port === port)) {
           return
         }
 
-        opts.log.info('connect to ', fullAddress)
+        log.info(`connect to ${fullAddress}`)
         const client = new net.Socket()
         const socket = new JsonSocket(client)
 
         socket.connect(port, address, () => {
-          opts.log.info(`Network Joined ${fullAddress}`)
+          log.info(`Network Joined ${fullAddress}`)
 
           data.status = 'Connected'
           addPeer(createPeer(socket, address, port))
         })
 
-        client.on('error', err => opts.log.error(err))
+        client.on('error', err => log.error(err))
       }
 
       server.on('connection', (connection) => {
@@ -102,15 +121,25 @@ module.exports = ({ port, known, data_dir, test_id, test_mode }, { load, save, h
         addresses.add({ ip, port: Number(port) })
       }
 
-      setInterval(() => {
-        broadcast({ type: 'addr', addresses: addresses.get(5) })
-      }, 3000)
+      const network_updates = () => {
+        setTimeout(() => {
+          broadcast({ type: 'addr', addresses: addresses.get(5) })
 
-      setInterval(() => {
-        addresses.get(2)
-          .filter(x => x)
-          .map(({ip, port}) => connect(`${ip}:${port}`))
-      }, 4000)
+          log.info(`peers_all  ${peers.length}: ${data.peers.filter(x => x.id).length}`)
+
+          if (peers.length < 5) {
+            log.info('attempting new connections')
+
+            addresses.get(5)
+              .filter(x => x)
+              .map(({ip, port}) => connect(`${ip}:${port}`))
+          }
+
+          network_updates()
+        }, 500)
+      }
+
+      network_updates()
 
       return Promise.resolve(network)
     })

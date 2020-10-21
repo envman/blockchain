@@ -3,6 +3,7 @@ const createRandom = require('random-seed').create
 const action_handlers = require('./action_handlers')
 const blank_hash = '0000000000000000000000000000000000000000000000000000000000000000'
 const h = require('./hash')
+const default_meta = require('./default_meta')
 
 const createWorld = _ => {
   const random = createRandom(blank_hash)
@@ -46,6 +47,8 @@ const createWorld = _ => {
 
   return world
 }
+
+const view_cache = {}
 
 const createView = (existing, update) => {
   const view = existing || {
@@ -158,7 +161,7 @@ const createView = (existing, update) => {
     let current = finish
     const path = [finish]
 
-    while (current.previous) {
+    while (current.previous !== default_meta.head) {
       path.unshift({ x: current.x, y: current.y })
 
       current = current.previous
@@ -670,6 +673,7 @@ const createView = (existing, update) => {
   Object.values(view.assets).map(x => x.tick && x.tick())
 
   view.apply = block => createView(view, block)
+  
   return view
 }
 

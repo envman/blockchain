@@ -19,10 +19,10 @@ const create_node = (port, web_port, known) => {
   })
 
   child.stdout.setEncoding('utf8')
-  child.stdout.on('data', x => console.log(`stdout: ${x}`))
+  child.stdout.on('data', x => console.log(`${id}: stdout: ${x}`))
 
   child.stderr.setEncoding('utf8')
-  child.stderr.on('data', x => console.log(`stderr: ${x}`))
+  child.stderr.on('data', x => console.log(`${id}: stderr: ${x}`))
 
   return { kill: _ => child.kill('SIGINT'), id, web_port }
 }
@@ -42,7 +42,7 @@ const create_nodes = (node_count) => {
   return nodes
 }
 
-const nodes = create_nodes(20)
+const nodes = create_nodes(8)
 
 const app = express()
 

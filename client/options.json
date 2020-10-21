@@ -1,3 +1,4 @@
 {
-  "username": "ENV"
+  "username": "ENV",
+  "data_root": "../data"
 }

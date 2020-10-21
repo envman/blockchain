@@ -10,10 +10,15 @@ const createView = require('./view')
 const wallet = require('./wallet')
 const create_loader = require('./loader')
 const default_meta = require('./default_meta')
-
-const difficulty = 3
+const { EventEmitter } = require('events')
 
 module.exports = (opts) => {
+  let difficulty = 2
+
+  if (opts.test_mode) {
+    difficulty = 0
+  }
+
   const save_dir = opts.data_root || path.join(__dirname, '..', '..', 'data')
   const objects_dir = path.join(save_dir, 'objects')
   const meta_path = path.join(save_dir, 'meta.json')
@@ -26,7 +31,15 @@ module.exports = (opts) => {
 
   opts.data_dir = save_dir
 
-  const have = hash => fs.exists(path.join(save_dir, `${hash}.json`))
+  const object_cache = {}
+
+  const have = hash => {
+    if (object_cache[hash]) {
+      return Promise.resolve(true)
+    }
+
+    return fs.exists(path.join(save_dir, `${hash}.json`))
+  }
 
   const save_meta = (meta) => {
     return fs.writeFile(path.join(save_dir, 'meta.json'), JSON.stringify(meta))
@@ -37,9 +50,19 @@ module.exports = (opts) => {
       .then(exists => exists || fs.writeFile(meta_path, JSON.stringify(default_meta)))
       .then(_ => fs.readFile(meta_path, 'utf8'))
       .then(JSON.parse)
+      .catch(err => {
+        opts.log.error(`Error loading meta ${err}`)
+        throw err
+      })
   }
 
   const load = hash => {
+    opts.log.info(`Load ${hash}`)
+
+    if (object_cache[hash]) {
+      return Promise.resolve(JSON.parse(JSON.stringify(object_cache[hash])))
+    }
+
     const dir = path.join(objects_dir, `${hash}.json`)
 
     return fs.exists(dir)
@@ -49,20 +72,41 @@ module.exports = (opts) => {
         }
 
         return fs.readFile(path.join(objects_dir, `${hash}.json`), 'utf8')
-          .then(JSON.parse)
+          .then(x => {
+            try {
+              return JSON.parse(x)
+            } catch (error) {
+              opts.log.error(`Cannot parse ${x}`)
+              throw error
+            }
+          })
+          .catch(err => {
+            opts.log.error(`Error loading ${hash} ${err}`)
+            throw err
+          })
       })
   }
 
-  const save = (hash, object) => Promise.resolve(object)
-    .then(x => JSON.stringify(x, null, 2))
-    .then(x => fs.writeFile(path.join(objects_dir, `${hash}.json`), x))
+  const save = (hash, object) => {
+    opts.log.info(`Save ${hash} ${JSON.stringify(object)}`)
+
+    object_cache[hash] = JSON.parse(JSON.stringify(object))
+
+    if (opts.test_mode) {
+      return Promise.resolve()
+    }
+
+    return Promise.resolve(object)
+      .then(x => JSON.stringify(x, null, 2))
+      .then(x => fs.writeFile(path.join(objects_dir, `${hash}.json`), x))
+  }
 
   return Promise.all([createNetwork(opts, { load, save, have }), createUser(opts), load_meta()])
     .then(([network, user, meta]) => {
       const actions = []
       let view = createView()
 
-      const { full_load, network_loaded } = create_loader(network, load)
+      const { full_load, network_loaded } = create_loader(network, load, opts.log)
 
       // Block is the latest
       const block_to_view = block => {
@@ -79,7 +123,9 @@ module.exports = (opts) => {
         let view = createView()
 
         for (let current of chain) {
-          view = view.apply(current) || view
+          if (current !== default_meta.head) {
+            view = view.apply(current) || view
+          }
         }
 
         return view
@@ -166,6 +212,7 @@ module.exports = (opts) => {
                 })
               })
           })
+          .catch(err => opts.log.error(`Miner promise all ${err}`))
       }
 
       const update_view = (hash) => {
@@ -185,7 +232,32 @@ module.exports = (opts) => {
       }
 
       if (opts.miner) {
-        miner = fork('./block/miner')
+        if (opts.test_mode) {
+          miner = new EventEmitter()
+
+          let timeout
+
+          miner.send = obj => {
+            if (timeout) {
+              console.log('clear timeout')
+              clearTimeout(timeout)
+            }
+
+            if (obj.type === 'block') {
+              console.log('queue block')
+
+              setTimeout(() => {
+                miner.emit('message', {
+                  type: 'block',
+                  hash: h(obj.body),
+                  block: obj.body,
+                })
+              }, Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000)
+            }
+          }          
+        } else {
+          miner = fork('./block/miner')
+        }
 
         if (meta.head === default_meta.head) {
           update_miner()
@@ -223,12 +295,19 @@ module.exports = (opts) => {
         }
 
         if (msg.object.type === 'block') {
+          opts.log.info(`GOT BLOCK ${JSON.stringify(msg)}`)
+
           save(msg.hash, msg)
             .then(_ => {
               const complete = network_loaded(msg)
 
               if (complete) {
                 update_view(msg.hash)
+
+                network.broadcast({
+                  type: 'publish',
+                  hash: msg.hash
+                })
               }
             })
         }
@@ -319,5 +398,5 @@ module.exports = (opts) => {
           miner && miner.send({ type: 'kill' })
         }
       }
-    })
+    }).catch(err => opts.log.error(err))
 }

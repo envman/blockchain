@@ -64,24 +64,29 @@ module.exports = opts => {
           })
 
           app.get('/testing/info', (req, res) => {
-            res.json(game.view().network)
+            const view = game.view()
+
+            res.json({
+              head: view.chain.head,
+              ...view.network
+            })
           })
 
           app.listen(opts.web_port || 8080)
 
           process.on('SIGTERM', () => {
-            console.log('SIGTERM signal received.')
+            // console.log('SIGTERM signal received.')
 
             game.kill()
-            app.close()
+            // app.close()
             process.exit()
           })
 
           process.on('SIGINT', () => {
-            console.log('SIGTERM signal received.')
+            // console.log('SIGTERM signal received.')
 
             game.kill()
-            app.close()
+            // app.close()
             process.exit()
           })
         })

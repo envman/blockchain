@@ -1,16 +1,22 @@
 const default_meta = require('./default_meta')
 
-module.exports = (network, load) => {
+module.exports = (network, load, log) => {
 
   let waiting_load = []
 
   const full_load = hash => {
+    if (!hash) {
+      throw new Error(`Loding null hash`)
+    }
+
     return load(hash)
       .then(object => {
         return new Promise(resolve => {
           const awaiter = { hash }
 
           const loaded = obj => {
+            log.info(`Loaded ${JSON.stringify(obj)}`)
+
             waiting_load.splice(waiting_load.indexOf(awaiter, 1))
 
             if (!obj.object) {
@@ -26,19 +32,26 @@ module.exports = (network, load) => {
               })
 
               if (obj.object.previous !== default_meta.head) {
+                if (!obj.object.previous) {
+                  log.error(`no previous ${JSON.stringify(obj)}`)
+                  throw new Error(`no previous ${JSON.stringify(obj)}`)
+                }
+
                 const update_previous = full_load(obj.object.previous)
                   .then(p => {
                     obj.object.previous = p
                   })
 
                 proms.push(update_previous)
-              } else {
-                delete obj.object.previous
               }
 
               return Promise.all(proms)
                 .then(_ => {
                   resolve({ ...obj.object, user: obj.user })
+                })
+                .catch(err => {
+                  log.error(`Error in Promise.all loader.js ${err}`)
+                  throw err
                 })
             }
 
